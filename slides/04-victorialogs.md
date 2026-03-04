@@ -63,6 +63,7 @@ receivers:
         severity:
           parse_from: attributes.error_severity
           mapping:
+            debug: [ DEBUG ]
             info:  [ INFO, NOTICE, LOG ]
             warn:  [ WARNING ]
             error: [ ERROR ]

@@ -39,7 +39,7 @@ services:
       pgbench-init:
         condition: service_completed_successfully
     entrypoint: >
-      sh -c "pgbench -h postgres -U postgres -c 5 -j 2 -T 86400 -P 60 postgres"
+      sh -c "pgbench -h postgres -U postgres -c 5 -j 1 -R 50 -T 86400 -P 60 postgres"
     restart: unless-stopped
 
   otel-collector:
@@ -60,7 +60,7 @@ services:
     restart: unless-stopped
 
   victoriametrics:
-    image: victoriametrics/victoria-metrics:latest
+    image: victoriametrics/victoria-metrics:v1.137.0
     container_name: workshop-victoriametrics
     ports:
       - "8428:8428"
@@ -72,7 +72,7 @@ services:
     restart: unless-stopped
 
   victorialogs:
-    image: victoriametrics/victoria-logs:latest
+    image: victoriametrics/victoria-logs:v1.47.0
     container_name: workshop-victorialogs
     ports:
       - "9428:9428"
@@ -81,7 +81,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:12.4.0
     container_name: workshop-grafana
     ports:
       - "3000:3000"

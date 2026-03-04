@@ -58,8 +58,9 @@ receivers:
 | Плагин | Что собирает |
 |--------|-------------|
 | `activity` | Соединения, vacuums, wait events |
-| `bgwriter` | Background writer, checkpoints |
+| `bgwriter` | Background writer |
 | `cache` | Cache hit/miss ratio |
+| `checkpointer` | Контрольные точки |
 | `databases` | Транзакции, блоки, temp-файлы |
 | `locks` | Блокировки |
 | `wal` | Статистика WAL |
