@@ -1,0 +1,7 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes PostgreSQL subscriptions statistics.
+      subscription:
+        enabled: true

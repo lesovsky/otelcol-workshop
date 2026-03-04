@@ -1,0 +1,142 @@
+# Kafkaexporter config example.
+# Use with basic.yml and logs_*.yml configs:
+# build/pgpro-otel-collector/pgpro-otel-collector --config configs/basic.yml --config configs/logs_json.yml --config configs/kafka.yml
+#
+# Check metrics:
+# kafkactl consume otlp_metrics --tail=5 | jq
+#
+# Check logs:
+# kafkactl consume otlp_logs --tail=5 | jq
+#
+# Full features list is available at:
+# https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/exporter/kafkaexporter/README.md
+exporters:
+  kafka:
+    # The list of kafka brokers.
+    brokers:
+      - localhost:9092
+      # - broker2:9092
+
+    # Kafka protocol version.  
+    protocol_version: 2.1.0
+
+    # Whether to resolve then reverse-lookup broker IPs during startup.
+    # resolve_canonical_bootstrap_servers_only: true
+
+    # The client ID to configure the Kafka client with. The client ID will be used for all produce requests.
+    client_id: pgpro-otel-collector
+
+    logs:
+      # The name of the Kafka topic to which logs will be exported.
+      topic: otlp_logs
+      # The encoding for logs.
+      encoding: otlp_json # otlp_proto
+      # The name of the metadata key whose value should be used as the message's topic.
+      # topic_from_metadata_key: ''
+
+    metrics:
+      # The name of the Kafka topic from which to consume metrics.
+      topic: otlp_metrics
+      # The encoding for metrics.
+      encoding: otlp_json # otlp_proto, raw
+      # The name of the metadata key whose value should be used as the message's topic.
+      # topic_from_metadata_key: ''
+
+    # Specify the resource attribute whose value should be used as the message's topic.
+    # topic_from_attribute: ''
+
+    # Specifies a list of metadata keys to propagate as Kafka message headers. 
+    # If one or more keys aren't found in the metadata, they are ignored.
+    # NOTE: These attributes help distinguish signals (metrics, logs) from different instances.
+    include_metadata_keys:
+      - service.name
+      - service.instance.id
+
+    # Configures the exporter to include the hash of sorted resource attributes 
+    # as the message partitioning key in metric messages sent to kafka.
+    # partition_metrics_by_resource_attributes: true
+
+    # configures the exporter to include the hash of sorted resource attributes 
+    # as the message partitioning key in log messages sent to kafka.
+    # partition_logs_by_resource_attributes: true
+
+    # TLS configuration. 
+    tls:
+      insecure: true # see https://github.com/open-telemetry/opentelemetry-collector/blob/main/config/configtls/README.md
+
+    # auth:
+    #   ...
+
+    # metadata:
+    #   ...
+
+    # Is the timeout for every attempt to send data to the backend.
+    timeout: 30s
+
+    # Configure retry in case of export failure.
+    # see https://pkg.go.dev/go.opentelemetry.io/collector/exporter/exporterhelper
+    # retry_on_failure:
+      # enabled: true
+      #
+      # The time to wait after the first failure.
+      # initial_interval: 1s
+      #
+      # The maximum backoff interval. Once this value is reached, the delay between retries will always be `max_interval`. 
+      # max_interval: 30s
+      #
+      # The maximum total time (including retries) spent attempting to send batch.
+      # Once this duration is exceeded, data will be discarded. 
+      # If set to 0, retries will continue indefinitely.
+      # max_elapsed_time: 300s
+      #
+      # Multiplier applied to the backoff interval for exponential backoff.
+      # multiplier: 2
+
+    # Configure sending queue.
+    # sending_queue:
+      # enabled: true
+      #
+      # Number of consumers that dequeue batches. Ignored if `enabled` is false.
+      # num_consumers: 10
+      #
+      # Maximum size the queue can accept; ignored if `enabled` is false.
+      # queue_size: 5000
+
+    # Producer configuration.
+    producer:
+      # The maximum permitted size of a message in bytes.
+      max_message_bytes: 1000000
+      # Controls when a message is regarded as transmitted.
+      required_acks: 1 # see https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html#acks
+      # The compression used when producing messages to kafka.
+      # NOTE: Compression can reduce network bandwidth usage when sending messages to Kafka, so we recommend considering enabling this option.
+      compression: none # gzip, snappy, lz4, and zstd; see https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html#compression-type
+      # compression_params
+      #   ...
+      # The maximum number of messages the producer will send in a single broker request.
+      flush_max_messages: 0
+
+processors:
+  # The batch processor places events into batches.
+  # Batching helps better compress the data and reduce the number of outgoing connections required to transmit the data
+  batch/kafka:
+    # Number of spans, metric data points, or log records after which a batch will be sent regardless of the timeout. Default = 8192.
+    send_batch_size: 1024
+    # The upper limit of the batch size. 0 means no upper limit of the batch size.
+    # This property ensures that larger batches are split into smaller units.
+    # It must be greater than or equal to send_batch_size.
+    send_batch_max_size: 1024
+    # Time duration after which a batch will be sent regardless of size. Default = 200ms.
+    timeout: 1s
+
+service:
+  pipelines:
+    metrics/kafka:
+      receivers: [ postgrespro ]
+      processors: [ batch/kafka,resource ]
+      exporters: [ kafka ]
+    logs/kafka:
+      receivers: [ filelog ]
+      # Each pipeline always gets its own instance of the processor, so it's okay to use batch/kafka multiple times.
+      processors: [ batch/kafka,resource,attributes/convert ]
+      exporters: [ kafka ]

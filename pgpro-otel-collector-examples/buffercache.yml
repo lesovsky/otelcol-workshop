@@ -1,0 +1,7 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes shared buffer cache metrics based on 'pg_buffercache' extension. Uses connection to the default database.
+      buffercache:
+        enabled: true

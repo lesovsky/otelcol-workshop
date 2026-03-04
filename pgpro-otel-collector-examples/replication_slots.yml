@@ -1,0 +1,7 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes replication slots statistics. Uses connection to the default database.
+      replication_slots:
+        enabled: true

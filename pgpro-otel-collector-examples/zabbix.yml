@@ -1,0 +1,49 @@
+# Zabbix exporter config example.
+# Use with basic.yml config:
+# build/pgpro-otel-collector/pgpro-otel-collector --config configs/basic.yml --config configs/zabbix.yml
+#
+# OTel Template should be imported to Zabbix and applied to the host with name from "host" parameter.
+# When "host" not set -- machine host name is used instead (so such host should be enabled in Zabbix and Template should be applied to it).
+exporters:
+  zabbixexporter:
+    # IP of the Zabbix server with port.
+    # Default port is 10051.
+    endpoint: zabbix_server_ip:10051
+    # Host name to which Template is applied.
+    # When empty host name is used instead.
+    host: Prometheus
+    # Max count of items to send to the Zabbix via sender_protocol at once.
+    batch_max_size: 100
+    #
+    # Timeout of processing one batch of metrics by this exporter.
+    # timeout: 5s
+    #
+    # Sending queue in which LLD (low-level discovery) values and metrics values are stored before sent.
+    # Metrics queue supports only "queue_size" parameter.
+    sending_queue:
+      enabled: true
+      queue_size: 1_000
+      num_consumers: 10
+      wait_for_result: false
+      block_on_overflow: false
+    retry_on_failure:
+      # Retry behaviour for LLD values.
+      discovery:
+        enabled: true
+        initial_interval: 5s
+        max_interval: 30s
+        max_elapsed_time: 5m
+      # Retry behaviour for metrics values.
+      metrics:
+        enabled: true
+        initial_interval: 1s
+        max_interval: 30s
+        max_elapsed_time: 1m
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - postgrespro
+      exporters:
+        - prometheus
+        - zabbixexporter

@@ -1,0 +1,57 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = table
+      # Includes table bloat statistics.
+      # Without a list of databases, plugin will gather statistics from all instance tables.
+      # With a list of databases, plugin will collect statistics from all specified databases.
+      # With a list of databases and their schemas, plugin will collect statistics from all specified database schemas.
+      # With a list of databases, schemas and their tables, plugin will collect statistics on certain tables.
+      bloat_tables:
+        enabled: true
+        # The fetcher is a background process that retrieves data from the database in batches.
+        fetcher:
+          # Whether to wait for the initial full data download to complete before starting.
+          wait_init: false
+          # Enable detailed logging for debugging purposes.
+          extended_log_enabled: false
+          # Number of records to fetch in each batch.
+          batch_size: 10000
+        collection_interval: 5m
+        # databases:
+        #   - name: demo
+        #     schemas:
+        #       - name: bookings
+        #         tables:
+        #           - name: bookings
+        #           - name: flights
+      # level = index
+      # Includes index bloat statistics.
+      # Without a list of databases, plugin will gather statistics from all instance indexes.
+      # With a list of databases, plugin will collect statistics from all specified databases.
+      # With a list of databases and their schemas, plugin will collect statistics from all specified database schemas.
+      # With a list of databases, schemas and their tables, plugin will collect statistics from all specified database tables.
+      # With a list of databases, schemas, tables and their indexes, plugin will collect statistics on certain indexes.
+      bloat_indexes:
+        enabled: true
+        # The fetcher is a background process that retrieves data from the database in batches.
+        fetcher:
+          # Whether to wait for the initial full data download to complete before starting.
+          wait_init: false
+          # Enable detailed logging for debugging purposes.
+          extended_log_enabled: false
+          # Number of records to fetch in each batch.
+          batch_size: 10000
+        collection_interval: 5m
+        # databases:
+        #    - name: demo
+        #      schemas:
+        #       - name: bookings
+        #         tables:
+        #           - name: bookings
+        #             indexes:
+        #             - name: bookings_pkey
+        #           - name: flights
+        #             indexes:
+        #             - name: flights_pkey
+        #             - name: flights_flight_no_scheduled_departure_key

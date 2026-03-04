@@ -1,0 +1,7 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes data about the checkpointer process of the cluster (see pg_stat_checkpointer).
+      checkpointer:
+        enabled: true

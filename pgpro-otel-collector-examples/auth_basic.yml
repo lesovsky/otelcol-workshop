@@ -1,0 +1,36 @@
+# Basic Authenticator config example.
+# Use with basic.yml config:
+# BASIC_AUTH_USERNAME=username BASIC_AUTH_PASSWORD=password build/pgpro-otel-collector/pgpro-otel-collector --config configs/basic.yml --config configs/auth_basic.yml
+#
+# Check authentication:
+# $ curl 127.0.0.1:8889/metrics
+# no basic auth provided
+#
+# $ curl -u username:password 127.0.0.1:8889/metrics
+#
+# More about basic authentication: 
+# https://developer.mozilla.org/ru/docs/Web/HTTP/Guides/Authentication
+# https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/basicauthextension
+extensions:
+  basicauth/prometheus:
+    htpasswd:
+      # Either one of htpasswd.file or htpasswd.inline has to be set. 
+      # If both are configured, htpasswd.inline credentials take precedence.
+      #
+      # The path to the htpasswd file.
+      # file: .htpasswd
+      #
+      # The htpasswd file inline content.
+      inline: |
+       ${env:BASIC_AUTH_USERNAME}:${env:BASIC_AUTH_PASSWORD}
+exporters:
+  # Exports data in the Prometheus format, which allows it to be scraped by a Prometheus server.
+  # Documentation: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusexporter
+  prometheus:
+    endpoint: :8889
+    send_timestamps: true
+    auth:
+      # basicauth/prometheus is the extension name to use as the authenticator for this exporter.
+      authenticator: basicauth/prometheus
+service:
+  extensions: [ basicauth/prometheus ]

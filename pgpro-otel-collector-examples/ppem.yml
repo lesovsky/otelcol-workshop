@@ -1,0 +1,197 @@
+# Configuration example for PostgresPro Enterprise Manager.
+# Depending on PostgresPro Enterprise Manager installation you may adjust configuration and export metrics to PPEM, Elastic or both.
+# This example includes:
+# - collecting Postgres metrics using 'postgrespro' receiver
+# - collecting Postgres CSV logs using 'filelog' receiver
+# - exporting metrics and logs to PostgresPro Enterprise Manager
+# - exporting metrics and logs to Elastic APM service
+
+receivers:
+  # Collect metrics from Postgres instance
+  postgrespro:
+    collection_interval: 60s
+    database: postgres
+    endpoint: localhost:5432
+    initial_delay: 1s
+    max_threads: 3
+    metrics: null
+    password: postgres
+    plugins:
+      activity:
+        enabled: true
+      bgwriter:
+        enabled: true
+      cache:
+        enabled: true
+      locks:
+        enabled: true
+      version:
+        enabled: true
+      wal:
+        enabled: true
+    transport: tcp
+    username: postgres
+  # Collect CSV logs of Postgres instance
+  filelog:
+    include:
+      - /var/log/postgresql/*.csv
+    multiline:
+      line_start_pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}
+    operators:
+      - header: timestamp,user,dbname,pid,connection_from,session_id,line_num,ps,session_start,vxid,txid,error_severity,state_code,message,detail,hint,internal_query,internal_position,context,statement,cursor_position,func_name,application_name,backend_type,leader_pid,query_id
+        timestamp:
+          layout: '%Y-%m-%d %H:%M:%S.%L %Z'
+          layout_type: strptime
+          parse_from: attributes.timestamp
+        severity:
+          parse_from: attributes.error_severity
+          mapping:
+            debug: [ DEBUG ]
+            info:  [ INFO, NOTICE, LOG ]
+            warn:  [ WARNING ]
+            error: [ ERROR ]
+            fatal: [ FATAL, PANIC ]
+        type: csv_parser
+      - field: attributes.timestamp
+        type: remove
+      - field: attributes.error_severity
+        type: remove
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_elapsed_time: 5m
+      max_interval: 30s
+    start_at: end
+
+processors:
+  # The batch processor places events into batches.
+  # Batching helps better compress the data and reduce the number of outgoing connections required to transmit the data
+  batch/metrics:
+    # Number of spans, metric data points, or log records after which a batch will be sent regardless of the timeout. Default = 8192.
+    send_batch_size: 8192
+    # Time duration after which a batch will be sent regardless of size. Default = 200ms.
+    timeout: 10s
+  batch/logs:
+    send_batch_size: 8192
+    timeout: 30s
+
+  attributes/convert:
+    actions:
+    - action: convert
+      converted_type: int
+      key: pid
+    - action: convert
+      converted_type: int
+      key: line_num
+    - action: convert
+      converted_type: int
+      key: txid
+    - action: convert
+      converted_type: int
+      key: remote_port
+    - action: convert
+      converted_type: int
+      key: cursor_position
+    - action: convert
+      converted_type: int
+      key: internal_position
+    - action: convert
+      converted_type: int
+      key: leader_pid
+  resource:
+    attributes:
+    - action: upsert
+      key: service.name
+      value: postgresql
+    - action: upsert
+      key: service.instance.id
+      value: localhost:5432
+  filter/include:
+    logs:
+      include:
+        match_type: strict
+        severity_texts:
+          #- "DEBUG"
+          - "INFO"
+          - "NOTICE"
+          - "WARNING"
+          - "ERROR"
+          - "LOG"
+          - "FATAL"
+          - "PANIC"
+
+service:
+  extensions: []
+  pipelines:
+    logs:
+      receivers:
+      - filelog
+      processors:
+      - filter/include
+      - resource
+      - attributes/convert
+      - batch/logs
+      exporters:
+      - otlphttp/ppem_logs
+      - otlphttp/elastic_logs
+    metrics:
+      receivers:
+      - postgrespro
+      processors:
+      - batch/metrics
+      exporters:
+      - prometheus
+      - otlphttp/ppem_metrics
+      - otlphttp/elastic_metrics
+  telemetry:
+    logs:
+      development: true
+      disable_caller: true
+      disable_stacktrace: true
+      encoding: json
+      error_output_paths:
+      - stderr
+      initial_fields: null
+      level: info
+      output_paths:
+      - stderr
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: localhost
+                port: 8888
+      level: detailed
+
+exporters:
+  # Configure export metrics to PostgresPro Enterprise Manager
+  otlphttp/ppem_metrics:
+    compression: ''
+    endpoint: https://ppem.example.org
+    headers:
+      X-Ppem-Source-Agent-Name: local
+      X-Ppem-Source-Instance-Port: '5432'
+  # Configure export metrics to Elastic APM Server
+  otlphttp/elastic_metrics:
+    compression: ''
+    endpoint: https://ppem-es-apm.example.org
+  # Configure export logs to PostgresPro Enterprise Manager
+  otlphttp/ppem_logs:
+    compression: ''
+    endpoint: https://ppem.example.org
+    headers:
+      X-Ppem-Source-Agent-Name: local
+      X-Ppem-Source-Instance-Port: '5432'
+    tls:
+      insecure_skip_verify: true
+  # Configure export logs to Elastic APM Server
+  otlphttp/elastic_logs:
+    compression: ''
+    endpoint: https://ppem-es-apm.example.org
+    tls:
+      insecure_skip_verify: true
+  # Configure export metrics for Prometheus service
+  prometheus:
+    endpoint: :8889
+    send_timestamps: true

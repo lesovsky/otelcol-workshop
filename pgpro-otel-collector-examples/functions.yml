@@ -1,0 +1,18 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = user function
+      # Includes function-level execution statistics. Uses connections for each defined database and for default database.
+      # Without a list of databases, plugin will gather statistics from all instance user functions.
+      # With a list of databases, plugin will collect statistics from all specified databases.
+      # With a list of databases and their schemas, plugin will collect statistics from all specified database schemas.
+      # With a list of databases, schemas and their functions, plugin will collect statistics on certain user functions.
+      functions:
+        enabled: true
+        # databases:
+        # - name: demo
+        #   schemas:
+        #     - name: bookings
+        #       functions:
+        #         - name: lang
+        #         - name: now

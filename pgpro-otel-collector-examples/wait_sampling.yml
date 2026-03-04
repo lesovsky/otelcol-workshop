@@ -1,0 +1,8 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes sampling-based metrics on wait events, based on 'pg_wait_sampling' extension.
+      # Available only for Postgres Pro Standard / Enterprise. Uses connection to the default database.
+      wait_sampling:
+        enabled: true

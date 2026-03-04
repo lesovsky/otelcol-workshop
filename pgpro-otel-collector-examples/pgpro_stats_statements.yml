@@ -1,0 +1,111 @@
+# CREATE EXTENSION pgpro_stats;
+# shared_preload_libraries = '..., pgpro_stats'
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes basic pgpro_statements statistics: calls, rows (by database, user and query ID).
+      pgpro_statements_generic:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes timing pgpro_statements statistics: total execution time, blocks read/write (by database, user and query ID).
+      pgpro_statements_timing:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pgpro_statements plans statistics (by database, user and query ID).
+      pgpro_statements_planning:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pgpro_statements shared blocks statistics (by database, user and query ID).
+      pgpro_statements_shared_io:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pgpro_statements local blocks statistics (by database, user and query ID).
+      pgpro_statements_local_io:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pgpro_statements temp blocks statistics (by database, user and query ID).
+      pgpro_statements_temp_io:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pgpro_statements WAL statistics (by database, user and query ID).
+      pgpro_statements_wal:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pgpro_statements JIT statistics (by database, user and query ID).
+      pgpro_statements_jit:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pgpro_statements parallel statistics (by database, user and query ID).
+      pgpro_statements_parallel:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Gathers queries texts.
+      pgpro_statements_queries:
+        enabled: true
+        # Maximum query length to collect (in bytes). If the query is greater than query_length, the query will be right-trimmed.
+        # If not set (or set to 0 or lower), the query length will not be limited.
+        # default = 0
+        query_length: 1024
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Gathers plans texts.
+      pgpro_statements_plans:
+        enabled: true
+        # Maximum plan length to collect (in bytes). If the plan is greater than plan_length, the plan will be right-trimmed.
+        # If not set (or set to 0 or lower), the plan length will not be limited.
+        # default = 0
+        plan_length: 1024
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Gathers number of cache invalidation messages.
+      pgpro_statements_inval_msgs:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Gathers resource usage statistics of the statement planning and execution.
+      pgpro_statements_rusage:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Gathers statistics on wait events for each execution of the queries.
+      pgpro_statements_wait_stats:
+        enabled: true
+        # databases:
+        #   - name: demo

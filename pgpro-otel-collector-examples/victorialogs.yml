@@ -1,0 +1,65 @@
+# VictoriaLogs exporter configuration example.
+#
+# Sends logs to a VictoriaLogs database using OpenTelemetry protocol.
+#
+# Use with logs_*.yml config:
+#   build/pgpro-otel-collector/pgpro-otel-collector --config configs/logs_json.yml --config configs/victorialogs.yml
+#
+# Or:
+#   build/pgpro-otel-collector/pgpro-otel-collector --config configs/logs_csv.yml --config configs/victorialogs.yml
+#
+# For more information, see: 
+# - https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
+# - https://docs.victoriametrics.com/guides/getting-started-with-opentelemetry/
+#
+# After running pgpro-otel-collector, verify that logs are visible in the UI:
+#   http://localhost:9428/select/vmui
+#
+# Exporters send data to one or more backends or destinations.
+exporters:
+  # Export logs via HTTP using the OTLP format.
+  otlphttp/victorialogs:
+    # Gzip compression is enabled by default.
+    # NOTE: Compression can reduce network bandwidth usage when sending messages to VictoriaLogs, so enabling this option is recommended.
+    # See: https://github.com/open-telemetry/opentelemetry-collector/blob/main/config/configgrpc/README.md#compression-comparison
+    compression: gzip
+    # The encoding to use for messages (must be "proto", which is the default value).
+    encoding: proto
+    # The base URL of the VictoriaLogs endpoint to send data to (without a suffix).
+    # By default, the collector appends /v1/logs.
+    endpoint: http://localhost:9428/insert/opentelemetry
+    tls:
+      # Whether to skip certificate verification.
+      insecure_skip_verify: false
+
+# Processors take the data collected by receivers and modify or transform it before sending it to the exporters.
+#
+# NOTE: This setup is for VictoriaLogs only.
+# VictoriaLogs infers the types of attributes based on their values.
+# If you're sending logs to another system, like Elasticsearch, you should consider using the attributes/convert processor.
+# See the logs_json.yml example.
+processors:
+  # The resource processor modifies resource attributes, which VictoriaLogs uses to create _streams for organizing logs.
+  resource:
+    attributes:
+      # These fields are required for external storage (e.g., ELK).
+      # In VictoriaLogs, they define the _stream associated with the logs.
+      #
+      # Streams determine how logs are indexed and queried — filters on _stream fields are much faster.
+      # Include only attributes that are often used in queries.
+      #
+      # For example, in large database setups, you could add 'dbname' here as a resource attribute.
+      - key: service.name
+        action: upsert
+        value: postgresql
+      - key: service.instance.id
+        action: upsert
+        value: address-of-postgres-instance:5432
+
+service:
+  extensions: []
+  pipelines:
+    logs:
+      receivers:  [ filelog ]
+      processors: [ resource ]
+      exporters:  [ otlphttp/victorialogs ]

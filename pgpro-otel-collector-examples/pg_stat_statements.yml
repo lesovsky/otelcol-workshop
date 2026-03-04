@@ -1,0 +1,77 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes basic pg_stat_statements statistics: calls, rows (by database, user and query ID).
+      statements_generic:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes timing pg_stat_statements statistics: total execution time, blocks read/write (by database, user and query ID).
+      statements_timing:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pg_stat_statements plans statistics (by database, user and query ID).
+      statements_planning:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pg_stat_statements shared blocks statistics (by database, user and query ID).
+      statements_shared_io:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pg_stat_statements local blocks statistics (by database, user and query ID).
+      statements_local_io:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pg_stat_statements temp blocks statistics (by database, user and query ID).
+      statements_temp_io:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pg_stat_statements WAL statistics (by database, user and query ID).
+      statements_wal:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pg_stat_statements JIT statistics (by database, user and query ID).
+      statements_jit:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Includes pg_stat_statements parallel statistics (by database, user and query ID).
+      statements_parallel:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Connects for default database only, but you can specify the list of databases to monitor.
+      # Gathers queries texts.
+      statements_queries:
+        enabled: true
+        # Maximum query length to collect (in bytes). If the query is greater than query_length, the query will be right-trimmed.
+        # If not set (or set to 0 or lower), the query length will not be limited.
+        # default = 0
+        query_length: 1024
+        # databases:
+        #   - name: demo

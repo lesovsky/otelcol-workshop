@@ -1,0 +1,10 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = database
+      # Includes database-level statistics: blocks, checksums, conflicts, sessions, temp files, transactions, tuples. Uses connections for each defined database and for default database.
+      # Without a list of databases, plugin will gather statistics from all instance databases.
+      databases:
+        enabled: true
+        # databases:
+        #   - name: demo

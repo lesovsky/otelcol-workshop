@@ -1,0 +1,151 @@
+# Receivers collect telemetry from one or more sources.
+receivers:
+  # Filelog tails and parses logs from files.
+  filelog:
+    # A list of file glob patterns that match the file paths to be read.
+    include: [ /var/log/postgresql/*.json ]
+    # At startup, where to start reading logs from the file. Options are beginning or end.
+    start_at: end
+    retry_on_failure:
+      # If true, the receiver will pause reading a file and attempt to resend the current batch of logs if it encounters an error from downstream components.
+      enabled: true
+      # Time to wait after the first failure before retrying.
+      initial_interval: 1s
+      # Upper bound on retry backoff interval. Once this value is reached the delay between consecutive retries will remain constant at the specified value.
+      max_interval: 30s
+      # Maximum amount of time (including retries) spent trying to send a logs batch to a downstream consumer. Once this value is reached, the data is discarded. Retrying never stops if set to 0.
+      max_elapsed_time: 5m
+    # Each operator performs a simple responsibility.
+    operators:
+      # The json_parser operator parses the string-type field selected by parse_from as JSON.
+      - type: json_parser
+        # Numbers like int and float are parsed as float64 by default. When parse_ints is enabled, numbers are parsed as json.Number and then converted to int64 or float64 based on the value.
+        parse_ints: true
+        # An optional timestamp block which will parse a timestamp field to `@timestamp` before passing the entry to the output operator.
+        timestamp:
+          # The field from which the value will be parsed.
+          parse_from: attributes.timestamp
+          # The type of timestamp. Valid values are strptime, gotime, and epoch.
+          layout_type: strptime
+          # The exact layout of the timestamp to be parsed.
+          layout: '%Y-%m-%d %H:%M:%S.%L %Z'
+        # Severity parses 'error_severity' to attributes 'severityText' and 'severityNumber'.
+        # More information can be found here: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/pkg/stanza/docs/types/severity.md
+        severity:
+          parse_from: attributes.error_severity
+          # Mapping of PostgreSQL message severity levels to severity levels of filelog.
+          # See: https://postgrespro.ru/docs/postgrespro/11/runtime-config-logging?lang=en
+          mapping:
+            debug: [ DEBUG ]
+            info:  [ INFO, NOTICE, LOG ]
+            warn:  [ WARNING ]
+            error: [ ERROR ]
+            fatal: [ FATAL, PANIC ]
+      # The remove operator removes a field from a record.
+      - type: remove
+        id: remove_timestamp
+        # Once the timestamp value is written to `@timestamp`, the `attributes.timestamp` field can be deleted as duplicate information.
+        field: attributes.timestamp
+
+# Processors take the data collected by receivers and modify or transform it before sending it to the exporters.
+processors:
+  # The attributes processor modifies attributes of logs.
+  attributes/convert:
+    actions:
+      # query_id is a field of bigint value. To display it correctly, it must be converted to a string.
+      - key: query_id
+        action: convert
+        converted_type: string
+      # PID could be larger than an integer, so we convert it to a string.
+      - action: convert
+        key: pid
+        converted_type: string
+  # The resource processor can be used to apply changes on resource attributes.
+  resource:
+    attributes:
+      # Service name, required field for external storage (ELK). Sets the index that will be used to store logs. Optional field for internal storage.
+      - key: service.name
+        action: upsert
+        value: postgresql
+      # Unique instance identifier, required  field for external storage (ELK). Allows to identify a log line bound to a specific instance. Optional field for internal storage.
+      - key: service.instance.id
+        action: upsert
+        value: address-of-postgres-instance:5432
+  # Filter logs.
+  # See: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor
+  #
+  # Allows including or excluding logs (or metrics) based on specified conditions.
+  #
+  # When both 'include' and 'exclude' sections are present, logs are first filtered by 'include' criteria, then those matching 'exclude' criteria are removed.
+  #
+  # Logs can be filtered using regular expressions:
+  # processors:
+  #   filter:
+  #     logs:
+  #       include:
+  #         match_type: regexp
+  #         record_attributes:
+  #           - key: error_severity
+  #             value: "(INFO|ERROR)"
+  #         bodies:
+  #           - "IMPORTANT:"
+  #       exclude:
+  #         match_type: regexp
+  #         record_attributes:
+  #           - key: query_id
+  #             value: "10"
+  #
+  # The filter also supports the OpenTelemetry Transformation Language (OTTL) for more complex conditions:
+  # See: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/pkg/ottl/README.md
+  #
+  # NOTE: When using 'log_record', records are DROPPED based on the specified condition (similar to 'exclude'):
+  # processors:
+  #   filter:
+  #     logs:
+  #       log_record:
+  #         - not IsMatch(attributes["error_severity"], "(INFO|ERROR)")
+  #         - not IsMatch(body, "IMPORTANT:")
+  #         - IsMatch(attributes["query_id"], "10")
+  #
+  # It's possible to filter by severity using the condition: 'severity_number < SEVERITY_NUMBER_WARN'.
+  filter/include:
+    logs:
+      include:
+        match_type: strict # or regexp
+        severity_texts:
+          #- "DEBUG"
+          - "INFO"
+          - "NOTICE"
+          - "WARNING"
+          - "ERROR"
+          - "LOG"
+          - "FATAL"
+          - "PANIC"
+
+# Exporters send data to one or more backends or destinations.
+exporters:
+  # Export logs via HTTP using OTLP format.
+  otlphttp:
+    # The target base URL to send data, without suffix, (by default the collector adds /v1/logs)
+    endpoint: https://logs.example.org:8080
+    tls:
+      # whether to skip verifying the certificate.
+      insecure_skip_verify: true
+    compression: ""
+    # Extra HTTP headers attached to outgoing requests
+    headers:
+      # Name of PPEM agent which have to be associated with this collector instance.
+      # Have to be used only when exporting data to PostgresPro Enterprise Manager.
+      "X-Ppem-Source-Agent-Name": ppem-agent
+      # Network port of database instance from which metrics have been collected.
+      # Have to be used only when exporting data to PostgresPro Enterprise Manager.
+      "X-Ppem-Source-Instance-Port": "5432"
+
+# The service section is used to configure what components are enabled in the Collector based on the configuration found in the receivers, processors, exporters, and extensions sections.
+service:
+  extensions: [ ]
+  pipelines:
+    logs:
+      receivers: [ filelog ]
+      processors: [ filter/include,resource,attributes/convert ]
+      exporters: [ otlphttp ]

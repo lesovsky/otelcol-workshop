@@ -1,0 +1,7 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes physical replication process statistics (currently for primary only). Uses connection to the default database.
+      replication:
+        enabled: true

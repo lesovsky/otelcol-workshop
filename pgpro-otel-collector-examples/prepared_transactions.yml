@@ -1,0 +1,7 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes prepared transactions metrics. Uses connection to the default database.
+      prepared_transactions:
+        enabled: true

@@ -1,0 +1,105 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: workshop-postgres
+    environment:
+      POSTGRES_PASSWORD: workshop
+    ports:
+      - "15432:5432"
+    volumes:
+      - ./configs/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - pg_data:/var/lib/postgresql
+      - pg_logs:/var/log/postgresql
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+  pgbench-init:
+    image: postgres:18
+    container_name: workshop-pgbench-init
+    environment:
+      PGPASSWORD: workshop
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "until pg_isready -h postgres -U postgres; do sleep 1; done && pgbench -h postgres -U postgres -i -s 10 postgres && echo 'pgbench init done'"
+    restart: "no"
+
+  pgbench:
+    image: postgres:18
+    container_name: workshop-pgbench
+    environment:
+      PGPASSWORD: workshop
+    depends_on:
+      pgbench-init:
+        condition: service_completed_successfully
+    entrypoint: >
+      sh -c "pgbench -h postgres -U postgres -c 5 -j 2 -T 86400 -P 60 postgres"
+    restart: unless-stopped
+
+  otel-collector:
+    build:
+      context: ./dockerfiles/otel-collector
+    container_name: workshop-otel-collector
+    environment:
+      POSTGRESQL_PASSWORD: workshop
+    ports:
+      - "8888:8888"
+      - "8889:8889"
+    volumes:
+      - ./configs/otel-collector/config-step3.yaml:/etc/pgpro-otel-collector/config.yaml:ro
+      - pg_logs:/var/log/postgresql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: workshop-victoriametrics
+    ports:
+      - "8428:8428"
+    volumes:
+      - vm_data:/victoria-metrics-data
+    command:
+      - "-httpListenAddr=:8428"
+      - "-opentelemetry.usePrometheusNaming"
+    restart: unless-stopped
+
+  victorialogs:
+    image: victoriametrics/victoria-logs:latest
+    container_name: workshop-victorialogs
+    ports:
+      - "9428:9428"
+    volumes:
+      - vl_data:/victoria-logs-data
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: workshop-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: workshop
+      GF_INSTALL_PLUGINS: "https://github.com/VictoriaMetrics/victorialogs-datasource/releases/download/v0.14.1/victoriametrics-logs-datasource-v0.14.1.zip;victorialogs-datasource"
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: victorialogs-datasource
+    volumes:
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - victoriametrics
+      - victorialogs
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  pg_logs:
+  vm_data:
+  vl_data:
+  grafana_data:

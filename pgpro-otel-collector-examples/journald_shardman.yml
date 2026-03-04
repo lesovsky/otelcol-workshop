@@ -1,0 +1,227 @@
+# Journald receiver config example.
+# 
+# Receiver parses Journald events from systemd journal.
+#
+# Receiver requires that:
+# - the journalctl binary is present in the $PATH of the agent (NOTE: journald is only supported on Linux);
+# - the collector's user has sufficient permissions to access the journal through journalctl.
+#
+# NOTE: This config is not suitable for sending logs to the PPEM (see ppem_journald.yml config instead).
+#
+# See: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/journaldreceiver/README.md 
+receivers:
+  journald:
+    # A directory containing journal files to read entries from.
+    # The default location depends on the system configuration.
+    # Common defaults include:
+    #   - '/run/log/journal' or '/run/journal' on most systems
+    #   - '/var/log/journal' on Debian and Ubuntu
+    # directory: /var/log/journal
+
+    # A list of specific journal files to read entries from.
+    # files:
+    #   - /var/log/journal/*/system.journal
+    #   - ./configs/test/system.journal
+
+    # Where to start reading logs from the file.
+    # Options: 'beginning' or 'end'
+    start_at: end
+
+    # A list of units to read entries from.
+    units:
+      - shardmand@*
+
+    # Filter output by message identifiers (SYSLOG_IDENTIFIER).
+    # identifiers:
+    #   - shardmand
+
+    # `matches` -- is a list of match conditions to filter journal entries.
+    #
+    # The following configuration:
+    # matches:
+    #   - _SYSTEMD_UNIT: ssh
+    #   - _SYSTEMD_UNIT: kubelet
+    #     _UID: "1000"
+    # 
+    # Will be passed to journalctl as the following arguments: 
+    # journalctl ... _SYSTEMD_UNIT=ssh + _SYSTEMD_UNIT=kubelet _UID=1000
+    #
+    # This retrieves all entries that match at least one of the following rules:
+    # - _SYSTEMD_UNIT is ssh
+    # - _SYSTEMD_UNIT is kubelet and _UID is 1000
+    #
+    # When multiple options are used:
+    # - Conditions within each group are combined with logical OR (e.g. units[0] OR units[1] ...).
+    # - Different groups are combined with logical AND (e.g. units AND identifiers).
+    #
+    # For example, the following configuration:
+    # matches:
+    #   - _SYSTEMD_UNIT: ssh
+    #   - _SYSTEMD_UNIT: kubelet
+    #     _UID: "1000"
+    # units:
+    #   - kubelet
+    #   - systemd
+    # priority: info
+    # identifiers:
+    #   - systemd
+    #
+    # Will be passed to journalctl as:
+    # journalctl ... --priority=info --unit=kubelet --unit=systemd --identifier=systemd _SYSTEMD_UNIT=ssh + _SYSTEMD_UNIT=kubelet _UID=1000
+    #
+    # Which matches the following set of rules:
+    # - _PRIORITY is 6
+    # - AND _SYSTEMD_UNIT is kubelet OR systemd
+    # - AND SYSLOG_IDENTIFIER systemd
+    # - AND entry matches at least one of the following rules:
+    #   * _SYSTEMD_UNIT is ssh
+    #   * _SYSTEMD_UNIT is kubelet and _UID is 1000
+    # 
+    # matches:
+    #   - _SYSTEMD_UNIT: shardmand@cluster0.service
+    #     _UID: "995"
+    #     SYSLOG_FACILITY: "3"
+
+    # Filter output by message priorities.
+    # See: https://wiki.archlinux.org/title/Systemd/Journal
+    # priority: info # possible values: emerg, alert, crit, err, warning, notice, info, debug.
+
+    # Filter output to entries where the MESSAGE field matches the specified regular expression.
+    # grep: 'INFO'
+
+    # Show only kernel messages. Adds _TRANSPORT=kernel and shows logs from current boot.
+    # dmesg: true
+
+    # Storage extension ID used for persisting cursor positions across restarts.
+    # If no storage extension is used, the receiver will manage cursors in memory only.
+    # See: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/storage
+    # storage: file_storage
+
+    # If true, very long logs and logs with unprintable characters will also be included.
+    # all: true
+
+    # Specify a namespace for journald queries.
+    # To set namespace:
+    # - add `LogNamespace=ssh` to `[Service]` section;
+    # - copy `/etc/systemd/journald.conf` to `/etc/systemd/journald@shardman.conf`;
+    # - edit `journald@shardman.conf` (if needed);
+    # - set `namespace` in this config (passed as --namespace=shardman).
+    # See: https://man.archlinux.org/man/systemd-journald.service.8#JOURNAL_NAMESPACES
+    # namespace:
+    #  - shardman
+
+    # If true and if the MESSAGE field is read as an array of bytes, the array will be converted to string.
+    # convert_message_bytes: true
+
+    # If receiver encounters an error from downstream components and retry is enabled, 
+    # then receiver will pause reading a file and attempt to resend the current batch of logs.
+    # See: https://pkg.go.dev/go.opentelemetry.io/collector/exporter/exporterhelper
+    retry_on_failure:
+      enabled: true
+
+      # The time to wait after the first failure.
+      initial_interval: 1s
+
+      # The maximum backoff interval. Once this value is reached, the delay between retries will always be `max_interval`. 
+      max_interval: 30s
+
+      # The maximum total time (including retries) spent attempting to send batch.
+      # Once this duration is exceeded, data will be discarded. 
+      # If set to 0, retries will continue indefinitely.
+      max_elapsed_time: 300s
+
+    # An array of operators.
+    # Only parsers and general purpose operators should be used.
+    # Operators will output to the next operator in the pipeline. The last operator in the pipeline will emit from the receiver.
+    # See: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/journaldreceiver/README.md#operators
+    # A list of operators is available here: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/pkg/stanza/docs/operators/README.md
+    operators:
+      # Parse shardmand message into corresponding log fields.
+      - type: regex_parser
+        parse_from: body.MESSAGE
+        regex: '^(?P<timestamp>.+)	(?P<level>.+)	(?P<message>.*)	(?P<fields>.+)$'
+        timestamp:
+          parse_from: attributes.timestamp
+          layout_type: strptime
+          layout: '%Y-%m-%dT%H:%M:%S.%f%z'
+        severity:
+          parse_from: attributes.level
+      # Parse additional attributes from the 'fields' JSON string.
+      - type: json_parser
+        parse_from: attributes.fields
+      # Remove the parsed timestamp to avoid duplication.
+      - type: remove
+        id: remove_timestamp
+        field: attributes.timestamp
+      # Remove the parsed level after severity is extracted.
+      - type: remove
+        id: remove_level
+        field: attributes.level
+      # Remove the parsed 'fields' JSON string after parsing.
+      - type: remove
+        id: remove_fields
+        field: attributes.fields
+      # Retain only fields useful for debugging.
+      - type: retain
+        fields:
+          - body._PID
+          - body._GID
+          - body._UID
+          - body._CMDLINE
+          - body._EXE
+          - body._HOSTNAME
+          - body._SYSTEMD_UNIT
+          - body._TRANSPORT
+
+processors:
+  batch/journald:
+    send_batch_size: 4096
+    timeout: 15s
+  transform:
+    log_statements:
+      - context: log
+        statements:
+          # Set resource.process.pid from body._PID, then remove body._PID.
+          - set(resource.attributes["process.pid"], Int(log.body["_PID"]))
+          - delete_key(log.body, "_PID")
+          # Set resource.process.command_line from body._CMDLINE (if present), then remove body._CMDLINE.
+          - set(resource.attributes["process.command_line"], log.body["_CMDLINE"]) where log.body["_CMDLINE"] != nil
+          - delete_key(log.body, "_CMDLINE")
+  resource:
+    attributes:
+    # Service name, required field for external storage (ELK). Sets the index that will be used to store logs. Optional field for internal storage.
+    - action: upsert
+      key: service.name
+      value: shardmand
+    # Unique instance identifier, required  field for external storage (ELK). Allows to identify a log line bound to a specific instance. Optional field for internal storage.
+    # This field is required by PPEM.
+    - action: upsert
+      key: service.instance.id
+      value: address-of-shardman-instance:5432
+
+# File storage configuration for the `storage` option.
+# See: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/storage/filestorage    
+# extensions:
+#  file_storage:
+#    directory: ./storage
+#    create_directory: true
+
+# Exporters send data to one or more backends or destinations.
+exporters:
+  # Export logs via HTTP using OTLP format.
+  otlphttp:
+    # By default gzip compression is enabled.
+    # See: https://github.com/open-telemetry/opentelemetry-collector/blob/main/config/configgrpc/README.md#compression-comparison
+    compression: gzip
+    # The target base URL to send data, without suffix, (by default the collector adds /v1/logs)
+    endpoint: https://logs.example.org:8080 # e.g. http://127.0.0.1:8200
+    tls:
+      # whether to skip verifying the certificate.
+      insecure_skip_verify: true
+service:
+  # extensions: [ file_storage ]
+  pipelines:
+    logs:
+      receivers: [ journald ]
+      processors: [ transform,resource,batch/journald ]
+      exporters: [ otlphttp ]

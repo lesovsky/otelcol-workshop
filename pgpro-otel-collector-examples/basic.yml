@@ -1,0 +1,285 @@
+receivers:
+  postgrespro:
+    # The transport protocol being used to connect to postgresql. Available options are tcp and unix.
+    # default = tcp
+    transport: tcp
+    # The endpoint of the postgresql server. Whether using TCP or Unix sockets, this value should be host:port.
+    # If transport is set to unix, the endpoint will internally be translated from host:port to /host.s.PGSQL.port
+    # default = localhost:5432
+    endpoint: &endpoint localhost:5432
+    # Client transport security settings.
+    # tls:
+    #   # Whether to disable client transport security for the postgresql connection.
+    #   # default = true
+    #   insecure: false
+    #   # Whether to skip server name and certificate validation if client transport security is enabled.
+    #   # default = false
+    #   insecure_skip_verify: false
+    #   # A set of certificate authorities used to validate the database server's SSL certificate.
+    #   # default = ""
+    #   ca_file: /etc/pgpro-otel-collector/cert.d/authorities.crt
+    #   # A certificate used for client authentication, if necessary.
+    #   # default = $HOME/.postgresql/postgresql.crt
+    #   cert_file: /etc/pgpro-otel-collector/cert.d/postgresql.crt
+    #   # An SSL key used for client authentication, if necessary.
+    #   # default = $HOME/.postgresql/postgresql.key
+    #   key_file: /etc/pgpro-otel-collector/cert.d/postgresql.key
+    # The default database to connect to. Instance-level plugins will use this connection.
+    # default = postgres
+    database: postgres
+    # PostgreSQL user name.
+    # default = postgres
+    username: postgres
+    # PostgreSQL user password.
+    # default = postgres
+    password: ${env:POSTGRESQL_PASSWORD}
+    # This receiver collects metrics on an interval. This value must be a string readable by Golang's time.ParseDuration.
+    # Valid time units are ns, us (or µs), ms, s, m, h.
+    # default = 10s
+    collection_interval: 60s
+    # Defines how long this receiver waits before starting.
+    # default = 1s
+    initial_delay: 1s
+    # Number of threads for simultaneous operation of plugins.
+    # default = 1
+    max_threads: 3
+    # The connection pool can be configured in this section. Connections from the pool are reused by different plugins.
+    # The pool for the default database is always open. Only one pool is created per database, and a single pool is used by the fetchers (bloat).
+    # Therefore, at most 3 * max_open connections could be opened simultaneously by the pgpro-otel-collector.
+    connection_pool:
+      # The duration after which an idle connection will be automatically closed by the health check.
+      max_idle_time: 10m
+      # The duration since creation after which a connection will be automatically closed.
+      max_lifetime: 10m
+      # The maximum amount of time a dial operation will wait for a connect to complete.
+      connect_timeout: 15s
+      # The maximum number of open connections in the pool.
+      max_open: 5
+    # Allow/deny lists can be configured globally for all plugins that support querying by databases, schemas, tables, etc.
+    # acl:
+    #   # Controls access (collecting metrics) to databases and all inherited objects.
+    #   databases:
+    #     allow:
+    #       - name: postgres
+    #         schemas:
+    #           - name: public
+    #             tables:
+    #               - name: table
+    #               - name: table_index
+    #                 indexes:
+    #                 - name: index1
+    #                 - name: index2
+    #             functions:
+    #               - name: function1
+    #     deny:
+    #       - name: db
+    #         schemas:
+    #           - name: schema
+    #             tables:
+    #               - name: table
+    # postgrespro receiver plugin settings.
+    # If a plugin is not specified in the configuration, it will be disabled by default.
+    plugins:
+      # level = instance
+      # Includes connections, vacuums, wait events statistics. Uses connection to the default database.
+      activity:
+        enabled: true
+      # level = instance
+      # Includes PostgreSQL archiving process statistics. Uses connection to the default database.
+      archiver:
+        enabled: true  
+      # level = instance
+      # You can set collection_interval option for each plugin individually.
+      # collection_interval: 30s
+      # Includes background writer buffers and checkpoints statistics. Uses connection to the default database.
+      bgwriter:
+        enabled: true
+      # level = database
+      # Includes database-level statistics: blocks, checksums, conflicts, sessions, temp files, transactions, tuples. Uses connections for each defined database and for default database.
+      # Without a list of databases, plugin will gather statistics from all instance databases.
+      databases:
+        enabled: true
+        # databases:
+        #   - name: demo
+      # level = instance
+      # Includes PostgreSQL IO statistics. Uses connection to the default database.
+      io:
+        enabled: true
+      # level = instance
+      # Includes locks statistics (based on pg_locks view). Uses connection to the default database.
+      locks:
+        enabled: true
+      # level = instance
+      # Includes physical replication process statistics (currently for primary only). Uses connection to the default database.
+      replication:
+        enabled: true
+      # level = instance
+      # Includes tablespace size statistic. Uses connection to the default database.
+      tablespaces:
+        enabled: true
+      # level = instance
+      # Includes PostgreSQL version metric as pg_settings.server_version_num. Uses connection to the default database.
+      version:
+        enabled: true
+      # level = instance
+      # Includes PostgreSQL health-related metrics. For example, uptime.
+      health:
+        enabled: true
+      # level = instance
+      # Includes PostgreSQL WAL activity statistics. Uses connection to the default database.
+      wal:
+        enabled: true
+      # level = instance
+      # Includes PostgresSQL cache (shared buffers) hit/miss usage statistics. Uses connection to the default database.
+      cache:
+        enabled: true
+    # Section to configure metrics visibility individually.
+    metrics:
+      # By default all metrics are enabled.
+      # postgresql.up:
+      #   enabled: false
+    # Section to configure shutdown behavior.
+    # shutdown:
+    #   # Whether to wait for plugins to finish before the collector exits.
+    #   no_wait: true
+
+exporters:
+  # Export metrics via HTTP using OTLP format.
+  # Documentation: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
+  # otlphttp:
+  #   endpoint: http://example.com:4318
+  #   compression: ""
+  #   # Extra HTTP headers attached to outgoing requests
+  #   headers:
+  #     # Name of PPEM agent which have to be associated with this collector instance.
+  #     # Have to be used only when exporting data to PostgresPro Enterprise Manager.
+  #     "X-Ppem-Source-Agent-Name": ppem-agent
+  #     # Network port of database instance from which metrics have been collected.
+  #     # Have to be used only when exporting data to PostgresPro Enterprise Manager.
+  #     "X-Ppem-Source-Instance-Port": "5432"
+  # Exports data in the Prometheus format, which allows it to be scraped by a Prometheus server.
+  # Documentation: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusexporter
+  prometheus:
+    endpoint: :8889
+    send_timestamps: true
+
+processors:
+  # The batch processor places events into batches.
+  # Batching helps better compress the data and reduce the number of outgoing connections required to transmit the data
+  batch/metrics:
+    # Number of spans, metric data points, or log records after which a batch will be sent regardless of the timeout. Default = 8192.
+    send_batch_size: 8192
+    # Time duration after which a batch will be sent regardless of size. Default = 200ms.
+    timeout: 10s
+  # The memory limiter processor is used to prevent out of memory situations on the collector. 
+  # Given that the amount and type of data the collector processes is environment-specific and 
+  # resource utilization of the collector is also dependent on the configured processors, 
+  # it is important to put checks in place regarding memory usage.
+  memory_limiter/metrics:
+    # Time between measurements of memory usage. The recommended value is 1 second. 
+    # If the expected traffic to the pgpro-otel-collector is very spiky then decrease the check_interval or increase 
+    # spike_limit_mib to avoid memory usage going over the hard limit.
+    # Default = 0s.
+    check_interval: 1s
+    # Maximum amount of memory, in MiB, targeted to be allocated by the process heap. This defines the hard limit.
+    # Default = 0.
+    limit_mib: 2048
+    # Maximum spike expected between the measurements of memory usage. The value must be less than limit_mib. 
+    # The soft limit value will be equal to (limit_mib - spike_limit_mib). 
+    # Default = 20% of limit_mib.
+    # spike_limit_mib: 400
+    #
+    # Maximum amount of total memory targeted to be allocated by the process heap.
+    # This configuration is supported on Linux systems with cgroups and it's intended to be used in dynamic platforms like docker.
+    # This option is used to calculate memory_limit from the total available memory (75% with the total memory of 1GiB will result 750 MiB).
+    # 'limit_mib' takes precedence over the percentage configuration.
+    # limit_percentage: 0
+    #
+    # Maximum spike expected between the measurements of memory usage. The value must be less than limit_percentage.
+    # This option is used to calculate spike_limit_mib from the total available memory (25% with the total memory of 1GiB will result 250MiB).
+    # This option is intended to be used only with limit_percentage.
+    # Default = 20% of limit_percentage.
+    # spike_limit_percentage: 0
+
+service:
+  # Telemetry for the collector itself.
+  telemetry:
+    # Configures collector's general logging.
+    logs:
+      # Sets the minimum enabled logging level.
+      # values: debug, info, warn, error
+      # default = info
+      level: info
+      # Puts the logger in development mode, which takes stacktraces more liberally.
+      # values: true, false
+      # default = false
+      development: false
+      # Sets the logger's encoding.
+      # values: console, json
+      # default = console
+      encoding: json
+      # Stops annotating logs with the calling function's file
+      #	name and line number. By default, all logs are annotated.
+      # values: true, false
+      # default = false
+      disable_caller: false
+      # Completely disables automatic stacktrace capturing. By
+      #	default, stacktraces are captured for 'warn' level and above logs in development
+      # and 'error' level and above in production.
+      # values: true, false
+      # default = false
+      disable_stacktrace: false
+      # output_paths is a list of URLs or file paths to write logging output to.
+      # The URLs could only be with "file" schema or without schema.
+      # The URLs with "file" schema must be an absolute path.
+      # The URLs without schema are treated as local file paths.
+      # "stdout" and "stderr" are interpreted as os.Stdout and os.Stderr.
+      # see details at Open in zap/writer.go.
+      # default = ["stderr"]
+      output_paths: ["stderr"]
+      # error_output_paths is a list of URLs or file paths to write zap internal logger errors to.
+      #	The URLs could only be with "file" schema or without schema.
+      #	The URLs with "file" schema must use absolute paths.
+      #	The URLs without schema are treated as local file paths.
+      #	"stdout" and "stderr" are interpreted as os.Stdout and os.Stderr.
+      #	see details at Open in zap/writer.go.
+      #	Note that this setting only affects the zap internal logger errors.
+      # default = ["stderr"]
+      error_output_paths: ["stderr"]
+      # initial_fields is a collection of fields to add to the root logger.
+      #	Example:
+      #	  initial_fields:
+      #     foo: "bar"
+      #	By default, there is no initial field.
+      initial_fields:
+    # Metrics about collector itself. Exposes them for scraping at address/metrics.
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: localhost
+                port: 8888
+      # Level is the level of telemetry metrics, the possible values are:
+      #  - "none" indicates that no telemetry data should be collected;
+      #  - "basic" is the recommended and covers the basics of the service telemetry.
+      #  - "normal" adds some other indicators on top of basic.
+      #  - "detailed" adds dimensions and views to the previous levels.
+      # default = basic
+      level: detailed
+  # Pipelines organizes receivers, processors and exporters into single data processing chain.
+  pipelines:
+    # Main pipeline for metrics processing.
+    metrics:
+      # Receivers used for collecting metrics.
+      receivers:
+        - postgrespro
+      # Exporters used for providing metrics outside.
+      processors:
+        - memory_limiter/metrics
+        - batch/metrics
+      exporters:
+        # Enables exporting metrics using OTLP protocol over HTTP. Used only when 'exporters.otlphttp' is enabled.
+        # - otlphttp
+        # Enables exporting metrics Prometheus-way using /metrics HTTP endpoint. Used only when 'exporters.prometheus' is enabled.
+        - prometheus

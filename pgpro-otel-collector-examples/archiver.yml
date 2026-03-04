@@ -1,0 +1,7 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes PostgreSQL archiving process statistics. Uses connection to the default database.
+      archiver:
+        enabled: true

@@ -1,0 +1,197 @@
+exporters:
+  otlphttp/log_to_vlogs:
+    compression: gzip
+    headers:
+      VL-Extra-Fields: log.type=postgres_logs,service.node.name=goppem:5432
+      VL-Stream-Fields: service.node.name
+    logs_endpoint: https://ppem-vlogs.l.postgrespro.ru/insert/opentelemetry/v1/logs
+    tls:
+      insecure_skip_verify: false
+  prometheus:
+    const_labels:
+      instance: goppem.l.postgrespro.ru:5432
+    endpoint: :8889
+    send_timestamps: true
+processors:
+  attributes/convert:
+    actions:
+    - action: convert
+      converted_type: string
+      key: query_id
+  batch/logs:
+    send_batch_size: 4096
+    timeout: 15s
+  batch/metrics:
+    send_batch_max_size: 8192
+    send_batch_size: 8192
+    timeout: 10s
+  memory_limiter/metrics:
+    check_interval: 1s
+    limit_mib: 2048
+  resource:
+    attributes:
+    - action: upsert
+      key: service.name
+      value: postgresql
+    - action: upsert
+      key: service.instance.id
+      value: goppem.l.postgrespro.ru:5432
+    - action: upsert
+      key: gitlab.pipeline.id
+      value: '970713'
+    - action: upsert
+      key: gitlab.pipeline.parent_id
+      value: ''
+    - action: upsert
+      key: gitlab.pipeline.triggered_by
+      value: tech_ppem_ldapreader
+    - action: upsert
+      key: gitlab.job.env.PROJECT_NAME
+      value: stand-goppem
+    - action: upsert
+      key: gitlab.job.env.OS
+      value: debian-12
+    - action: upsert
+      key: gitlab.job.env.PROFILE
+      value: goppem_optimal
+    - action: convert
+      converted_type: int
+      key: gitlab.pipeline.id
+    - action: convert
+      converted_type: int
+      key: gitlab.pipeline.parent_id
+receivers:
+  filelog:
+    force_flush_period: 10m
+    include:
+    - /var/log/postgresql/*.json
+    max_log_size: 20MB
+    operators:
+    - parse_ints: true
+      timestamp:
+        layout: '%Y-%m-%d %H:%M:%S.%L %Z'
+        layout_type: strptime
+        parse_from: attributes.timestamp
+      type: json_parser
+    - field: attributes.timestamp
+      type: remove
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_elapsed_time: 5m
+      max_interval: 30s
+    start_at: end
+  hostmetrics:
+    collection_interval: 60s
+    initial_delay: 1s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      disk: null
+      filesystem: null
+      load: null
+      memory: null
+      network: null
+      paging: null
+      processes: null
+  postgrespro:
+    collection_interval: 60s
+    connection_pool:
+      connect_timeout: 15s
+      max_idle_time: 10m
+      max_lifetime: 10m
+      max_open: 5
+    database: postgres
+    endpoint: localhost:5432
+    initial_delay: 1s
+    max_threads: 3
+    metrics: null
+    password: postgres
+    plugins:
+      activity:
+        enabled: true
+      archiver:
+        enabled: true
+      bgwriter:
+        enabled: true
+      bloat_indexes:
+        enabled: true
+      bloat_tables:
+        enabled: true
+      cache:
+        enabled: true
+      databases:
+        enabled: true
+      functions:
+        enabled: true
+      health:
+        enabled: true
+      indexes:
+        enabled: true
+      io:
+        enabled: true
+      locks:
+        enabled: true
+      replication:
+        enabled: true
+      replication_slots:
+        enabled: true
+      tables:
+        enabled: true
+      tables_io:
+        enabled: true
+      tables_size:
+        enabled: true
+      tables_vacuum:
+        enabled: true
+      tablespaces:
+        enabled: true
+      version:
+        enabled: true
+      wal:
+        enabled: true
+    transport: tcp
+    username: postgres
+service:
+  extensions: []
+  pipelines:
+    logs:
+      exporters:
+      - otlphttp/log_to_vlogs
+      processors:
+      - resource
+      - attributes/convert
+      - batch/logs
+      receivers:
+      - filelog
+    metrics:
+      exporters:
+      - prometheus
+      processors:
+      - memory_limiter/metrics
+      - batch/metrics
+      receivers:
+      - postgrespro
+      - hostmetrics
+  telemetry:
+    logs:
+      development: true
+      disable_caller: true
+      disable_stacktrace: true
+      encoding: json
+      error_output_paths:
+      - stderr
+      initial_fields: null
+      level: info
+      output_paths:
+      - stderr
+    metrics:
+      level: detailed
+      readers:
+      - pull:
+          exporter:
+            prometheus:
+              host: localhost
+              port: 8888

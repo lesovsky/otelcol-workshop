@@ -1,0 +1,7 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes PostgreSQL logs statistics. For example, logs directory size.
+      logs:
+        enabled: true

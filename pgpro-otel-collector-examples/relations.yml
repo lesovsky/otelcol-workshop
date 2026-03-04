@@ -1,0 +1,92 @@
+# Relations config example.
+#
+# Use with basic.yml config:
+# build/pgpro-otel-collector/pgpro-otel-collector --config configs/basic.yml --config configs/relations.yml
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes tablespace size statistic. Uses connection to the default database.
+      tablespaces:
+        enabled: true
+      # level = table
+      # Includes table-level statistics: access and tuples. Uses connections for each defined database and for default database.
+      # Without a list of databases, plugin will gather statistics from all instance tables.
+      # With a list of databases, plugin will collect statistics from all specified databases.
+      # With a list of databases and their schemas, plugin will collect statistics from all specified database schemas.
+      # With a list of databases, schemas and their tables, plugin will collect statistics on certain tables.
+      tables:
+        enabled: true
+        # databases:
+        #   - name: demo
+        #     schemas:
+        #       - name: bookings
+        #         tables:
+        #           - name: bookings
+        #           - name: flights
+      # level = table
+      # Includes table-level statistics: I/O statistics. Uses connections for each defined database and for default database.
+      # Without a list of databases, plugin will gather statistics from all instance tables.
+      # With a list of databases, plugin will collect statistics from all specified databases.
+      # With a list of databases and their schemas, plugin will collect statistics from all specified database schemas.
+      # With a list of databases, schemas and their tables, plugin will collect statistics on certain tables.
+      tables_io:
+        enabled: true
+        # databases:
+        #   - name: demo
+        #     schemas:
+        #       - name: bookings
+        #         tables:
+        #           - name: bookings
+        #           - name: flights
+      # level = table
+      # Includes table-level statistics: size of the tables, size of heap and size of toast. Uses connections for each defined database and for default database.
+      # Without a list of databases, plugin will gather statistics from all instance tables.
+      # With a list of databases, plugin will collect statistics from all specified databases.
+      # With a list of databases and their schemas, plugin will collect statistics from all specified database schemas.
+      # With a list of databases, schemas and their tables, plugin will collect statistics on certain tables.
+      tables_size:
+        enabled: true
+        # databases:
+        #   - name: demo
+        #     schemas:
+        #       - name: bookings
+        #         tables:
+        #           - name: bookings
+        #           - name: flights
+      # level = table
+      # Includes table-level statistics: vacuum and analyze. Uses connections for each defined database and for default database.
+      # Without a list of databases, plugin will gather statistics from all instance tables.
+      # With a list of databases, plugin will collect statistics from all specified databases.
+      # With a list of databases and their schemas, plugin will collect statistics from all specified database schemas.
+      # With a list of databases, schemas and their tables, plugin will collect statistics on certain tables.
+      tables_vacuum:
+        enabled: true
+        # databases:
+        #   - name: demo
+        #     schemas:
+        #       - name: bookings
+        #         tables:
+        #           - name: bookings
+        #           - name: flights
+      # level = index
+      # Includes index-level statistics: access, I/O statistics. Uses connections for each defined database and for default database.
+      # Without a list of databases, plugin will gather statistics from all instance indexes.
+      # With a list of databases, plugin will collect statistics from all specified databases.
+      # With a list of databases and their schemas, plugin will collect statistics from all specified database schemas.
+      # With a list of databases, schemas and their tables, plugin will collect statistics from all specified database tables.
+      # With a list of databases, schemas, tables and their indexes, plugin will collect statistics on certain indexes.
+      indexes:
+        enabled: true
+        # databases:
+        #    - name: demo
+        #      schemas:
+        #       - name: bookings
+        #         tables:
+        #           - name: bookings
+        #             indexes:
+        #             - name: bookings_pkey
+        #           - name: flights
+        #             indexes:
+        #             - name: flights_pkey
+        #             - name: flights_flight_no_scheduled_departure_key

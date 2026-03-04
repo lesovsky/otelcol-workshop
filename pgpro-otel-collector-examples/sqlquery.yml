@@ -1,0 +1,216 @@
+# SQL Query Receiver config example.
+#
+# The SQL Query Receiver uses custom SQL queries to generate logs and/or metrics from a database connection.
+#
+# Run:
+# build/pgpro-otel-collector/pgpro-otel-collector --config configs/sqlquery.yml
+#
+# Full features list is available at:
+# https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.141.0/receiver/sqlqueryreceiver
+receivers:
+  sqlquery:
+    # The name of the database driver.
+    driver: postgres
+    # The hostname or IP address of the database server. 
+    host: localhost
+    # The port number of the database server.
+    port: 5432
+    # The name of the database to connect to.
+    database: postgres
+    # The username for database authentication.
+    # The username will be properly escaped and securely handled when building the connection string.
+    # Special characters (such as #, @, %, etc.) are automatically URL-encoded to ensure proper connection string formatting.
+    username: postgres
+    # The password for database authentication.
+    # Supports environment variable substitution.
+    # Special characters (such as #, @, %, etc.) are automatically URL-encoded to ensure proper connection string formatting.
+    password: ${env:POSTGRESQL_PASSWORD}
+
+    # Additional driver-specific connection parameters.
+    additional_params:
+      application_name: pgpro-otel-collector
+      sslmode: disable
+
+    # Alternatively, the 'datasource' parameter can be used.
+    # datasource: "host=localhost port=5432 user=postgres password=postgres application_name=pgpro-otel-collector sslmode=disable"
+
+    # The time interval between query executions.
+    # default = 10s
+    collection_interval: 60s
+
+    # The ID of a storage extension to be used to track processed results.
+    # See: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/storage
+    # storage: file_storage
+
+    # Defines settings for the component's own telemetry - logs, metrics or traces. 
+    telemetry:
+      # Defines settings for the component's own logs. 
+      logs:
+        # If set to true, every time a SQL query is run, the text of the query and the values of its parameters will be logged together with the debug log "Running query".
+        query: false
+
+    # The maximumn number of open connections to the sql server. <= 0 means unlimited
+    # default = 0 (unlimited)
+    max_open_conn: 5
+
+    # A list of queries, where a query is a sql statement and one or more logs and/or metrics sections.
+    # At least one logs or one metrics section is required.
+    #
+    # NOTE:
+    # Avoid queries that produce any NULL values. If a query produces a NULL value, a warning will be logged. 
+    # Furthermore, if a configuration references the column that produces a NULL value, an additional error will be logged. 
+    # However, in either case, the receiver will continue to operate.
+    queries:
+      # Metrics example.
+      #
+      # Suppose we have the following data:
+      #
+      # CREATE TABLE products (id INTEGER, name TEXT, price NUMERIC);
+      # INSERT INTO products VALUES (1, 'Cheese', 9.99), (2, 'Bread', 1.99), (3, 'Milk', 2.99);
+      #
+      # CREATE TABLE sales (id BIGINT, product_id BIGINT, units INT, sold_at TIMESTAMP DEFAULT now());
+      # INSERT INTO sales VALUES (1, 1, 10), (2, 2, 20), (2, 2, 50), (3, 3, 30);
+      # 
+      # Each metrics section consists of a metric_name, a value_column, and additional optional fields. 
+      # Each metric in the configuration will produce one OTel metric per row returned from its SQL query.
+      - sql: >-
+            SELECT p.id, p.name, p.price, sum(s.units) AS sold
+            FROM products p LEFT JOIN sales s ON (p.id = product_id)
+            GROUP BY p.id, p.name, p.price
+        metrics:
+          # Gauge example.
+          # The name assigned to the OTel metric.
+          - metric_name: postgresql.products.price
+            # The column name in the returned dataset used to set the value of the metric's datapoint. 
+            value_column: price
+            # Data type can be 'gauge' or 'sum'.
+            # default = 'gauge'
+            data_type: gauge
+            # Value type can be int or double.
+            # default = int
+            value_type: double
+            # The description applied to the metric.
+            description: Price of the product.
+            # The units applied to the metric.
+            unit: rub
+            # The name of the column containing the start timestamp, the value of which is applied to the metric's start timestamp (otherwise the current time is used). 
+            # Only applies if the metric is of type cumulative sum.
+            # Should be in nanoseconds.
+            # start_ts_column: ts
+
+            # The name of the column containing the timestamp, the value of which is applied to the metric's timestamp. 
+            # This can be current timestamp depending upon the time of last recorded metric's datapoint.
+            # Should be in nanoseconds.
+            # ts_column: ts
+
+            # Static attributes applied to the metrics.
+            static_attributes:
+              database: postgres
+            # A list of column names in the returned dataset used to set attributes on the signal.
+            attribute_columns: ["name"]
+          # Sum example.
+          - metric_name: postgresql.products.sold
+            value_column: sold
+            data_type: sum
+            value_type: int
+            description: Total count of sold products.
+            unit: ""
+            static_attributes:
+              database: postgres
+            attribute_columns: ["name"]
+            # Whether a cumulative sum's value is monotonically increasing (i.e. never rolls over or resets).
+            # default = false
+            monotonic: true
+            # Aggregation only applicable for data_type=sum. Can be 'cumulative' or 'delta'.
+            # default = 'cumulative'
+            aggregation: cumulative
+
+      # Logs example.
+      #
+      # Suppose we have the following data:
+      #
+      # CREATE TABLE my_logs (id INTEGER, message TEXT, type TEXT);
+      # INSERT INTO my_logs VALUES (1, 'message1', 'info'), (2, 'message2', 'info'), (3, 'message3', 'error');
+      #
+      # To prevent reading the same rows on every collection interval, use a parameterized query, together with the 'tracking_start_value' and 'tracking_column' configuration properties. 
+      # The receiver will use the configured 'tracking_start_value' as the value for the query parameter when running the query for the first time. 
+      # After each query run, the receiver will store the value of the 'tracking_column' from the last row of the result set and use it as the value for the query parameter on next collection interval. 
+      # To prevent duplicate log downloads, make sure to sort the query results in ascending order by the 'tracking_column' value.
+      # Use the storage configuration property of the receiver to persist the tracking value across collector restarts.
+      - sql: SELECT id, message, type FROM my_logs WHERE id > $1 ORDER BY id
+        # In case of a parameterized query, defines the initial value for the parameter.
+        # Applies only to logs. 
+        tracking_start_value: "0"
+        # In case of a parameterized query, defines the column to retrieve the value of the parameter on subsequent query runs.
+        # Applies only to logs.
+        tracking_column: id
+        logs:
+            # Defines the column to use as the log record's body.
+          - body_column: message
+            # A list of column names in the returned dataset used to set attributes on the signal.
+            attribute_columns: ["type"]
+
+exporters:
+  # Exports data in the Prometheus format, which allows it to be scraped by a Prometheus server.
+  # Documentation: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusexporter
+  prometheus:
+    endpoint: :8889
+    send_timestamps: true
+  # Export metrics via HTTP using OTLP format.
+  # Documentation: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
+  otlphttp/sqlquery/metrics:
+    compression: ''
+    endpoint: https://metrics.example.org:8080
+    headers:
+      X-Ppem-Source-Agent-Name: local
+      X-Ppem-Source-Instance-Port: '5432'
+  # Export logs via HTTP using OTLP format.
+  # Documentation: https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlphttpexporter
+  otlphttp/sqlquery/logs:
+    compression: gzip
+    endpoint: https://logs.example.org:8080
+    headers:
+      X-Ppem-Source-Agent-Name: local
+      X-Ppem-Source-Instance-Port: '5432'
+
+processors:
+  # The batch processor accepts metrics or logs and places them into batches. 
+  # Documentation: https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/batchprocessor
+  batch/sqlquery:
+    send_batch_size: 2048
+    send_batch_max_size: 2048
+    timeout: 10s
+  # The resource processor can be used to apply changes on resource attributes.
+  # Documentation: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/resourceprocessor
+  resource:
+    attributes:
+      # Service name, required field for external storage (ELK). Sets the index that will be used to store logs. Optional field for internal storage.
+      - key: service.name
+        action: upsert
+        value: postgresql
+      # Unique instance identifier, required  field for external storage (ELK). Allows to identify a log line bound to a specific instance. Optional field for internal storage.
+      - key: service.instance.id
+        action: upsert
+        value: address-of-postgres-instance:5432
+
+service:
+  # Telemetry for the collector itself.
+  telemetry:
+    logs:
+      # Sets the minimum enabled logging level.
+      # values: debug, info, warn, error
+      # default = info
+      level: info
+  # Pipelines organizes receivers, processors and exporters into single data processing chain.
+  pipelines:
+    metrics/sqlquery:
+      receivers: [ sqlquery ]
+      processors: [ batch/sqlquery ]
+      exporters: 
+        - prometheus
+        # - otlphttp/sqlquery/metrics
+    # logs/sqlquery:
+    #   receivers: [ sqlquery ]
+    #   processors: [ batch/sqlquery,resource ]
+    #   exporters:
+    #     - otlphttp/sqlquery/logs

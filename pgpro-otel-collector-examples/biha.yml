@@ -1,0 +1,87 @@
+# BiHA config example.
+#
+# Run pgpro-otel-collector with this config:
+# POSTGRESQL_PASSWORD=<password> build/pgpro-otel-collector/pgpro-otel-collector --config configs/biha.yml
+#
+# NOTE: more configuration options of the postgrespro receiver could be found in basic.yml file.
+#
+# NOTE: If a plugin requires special access privileges, it could be configured in a separate postgrespro section with its own username.
+# See: https://postgrespro.ru/docs/otelcol/current/otelcol-configuration-and-access-privileges
+# receivers:
+#   postgrespro/biha:
+#     username: biha_replication_user
+#     ...
+#     plugins:
+#       biha:
+#         enabled: true
+#         ...
+#   postgrespro/otel:
+#     username: otel
+#     ...
+#     plugins:
+#       databases:
+#         enabled: true
+#
+# More about BiHA could be found here: https://postgrespro.ru/docs/enterprise/current/biha-reference?lang=en
+receivers:
+  postgrespro/biha:
+    transport: tcp
+    endpoint: &endpoint localhost:5432
+    database: biha_db
+    username: biha_replication_user
+    password: ${env:POSTGRESQL_PASSWORD}
+    collection_interval: 60s
+    initial_delay: 1s
+    # By default, the postgres database is not copied to a node in 'referee' or 'referee_with_wal' modes 
+    # (unless the `--referee-with-postgres-db` option is used).
+    #
+    # When collecting database-level, table-level, index-level, or function-level
+    # statistics from these nodes, the `postgres` database must be excluded using the
+    # `acl.databases.deny` section.
+    #
+    # This exclusion is not required when collecting per-instance statistics.
+    # acl:
+    #   databases:
+    #     deny:
+    #       - name: postgres
+    max_threads: 3
+    plugins:
+      biha:
+        enabled: true
+        cluster_name: cluster_name
+
+# Exporters send data to one or more backends or destinations.
+exporters:
+  prometheus/biha:
+    endpoint: :8889
+    send_timestamps: true
+    # Defines how long metrics remain exposed without updates.
+    # Since some BiHA metrics include 'biha_state' in their labels,
+    # it's best to set this parameter equal to the collection_interval
+    # so that outdated states don’t appear on the Prometheus page.
+    metric_expiration: 60s
+
+# Processors take the data collected by receivers and modify or transform it before sending it to the exporters.
+processors:
+  batch/metrics:
+    send_batch_size: 8192
+    timeout: 10s
+  memory_limiter/metrics:
+    check_interval: 1s
+    limit_mib: 2048
+
+# The service section is used to configure what components are enabled in the Collector based on the configuration found in the receivers, processors, exporters, and extensions sections.
+service:
+  # Pipelines organizes receivers, processors and exporters into single data processing chain.
+  pipelines:
+    metrics/biha:
+      # Receivers used for collecting metrics.
+      receivers:
+        - postgrespro/biha
+      # Exporters used for providing metrics outside.
+      processors:
+        - memory_limiter/metrics
+        - batch/metrics
+      exporters:
+        # Enables exporting metrics Prometheus-way using /metrics HTTP endpoint. Used only when 'exporters.prometheus' is enabled.
+        - prometheus/biha

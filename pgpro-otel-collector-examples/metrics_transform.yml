@@ -1,0 +1,227 @@
+# Metrics Transform Processor examples.
+#
+# Test with basic.yml config:
+# build/pgpro-otel-collector/pgpro-otel-collector --config configs/basic.yml --config configs/metrics_transform.yml
+#
+# The metrics transform processor can be used to rename metrics, and add, rename or delete label keys and values. 
+# It can also be used to perform scaling and aggregations on metrics across labels or label values.
+#
+# See: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/metricstransformprocessor
+processors:
+  # Rename `postgresql.databases.size_bytes` -> `postgresql.db.size_bytes`.
+  metricstransform/rename:
+    # Transforms is a list of transformations with each element transforming a metric selected by metric name.
+    transforms:
+        # Include specifies the metric name used to determine which metric(s) to operate on.
+      - include: postgresql.databases.size_bytes
+        # match_type specifies whether the include name should be used as a strict match or regexp match, default = strict.
+        match_type: strict
+        #
+        # Action specifies if the operations are performed on metrics in place (update), on an inserted clone (insert), or on a new combined metric (combine).
+        action: update
+        #
+        # new_name specifies the updated name of the metric.
+        new_name: postgresql.db.size_bytes
+
+  # Rename `postgresql.databases.*` -> `postgresql.db.*`.
+  metricstransform/rename_by_regexp:
+    transforms:
+      - include: ^postgresql\.databases\.(.*)$$
+        match_type: regexp
+        action: update
+        new_name: postgresql.db.$${1}
+
+  # Create a duplicate of the metric with the new name.
+  metricstransform/create_new:
+    transforms:
+      - include: postgresql.databases.size_bytes
+        match_type: strict
+        action: insert
+        new_name: postgresql.db.size_bytes
+
+  # Add new label `new_label` with value `value 1` to all points.
+  metricstransform/add_label:
+    transforms:
+      - include: postgresql.databases.size_bytes
+        action: update
+        # Operations contain a list of operations that will be performed on the resulting metric(s).
+        operations:
+            # Action defines the type of operation that will be performed, see examples below for more details.
+          - action: add_label
+            # new_label specifies the updated name of the label.
+            new_label: new_label
+            # new_value specifies the updated value of the label.
+            new_value: "value 1"
+
+  # Rename the label `database` -> `db`.
+  metricstransform/rename_label:
+    transforms:
+      - include: postgresql.databases.size_bytes
+        action: update
+        operations:
+          - action: update_label
+            # label specifies the label to operate on.
+            label: database
+            new_label: db
+
+  # For all `postgresql.databases.*` metrics rename label `database` -> `db`.
+  metricstransform/rename_label_multiple:
+    transforms:
+      - include: ^postgresql\.databases\.(.*)$$
+        match_type: regexp
+        action: update
+        operations:
+          - action: update_label
+            label: database
+            new_label: db
+  
+  # Rename label value `postgres` -> `default`.
+  metricstransform/rename_label_value:
+    transforms:
+      - include: postgresql.databases.size_bytes
+        action: update
+        operations:
+          - action: update_label
+            label: database
+            # value_actions contain a list of operations that will be performed on the selected label.
+            value_actions:
+                # Value specifies the value to operate on.
+              - value: postgres
+                # new_value specifies the updated value.
+                new_value: default
+
+  # Delete points where label `database` = `db11`.
+  metricstransform/delete_by_label_value:
+    transforms:
+      - include: postgresql.databases.size_bytes
+        action: update
+        operations:
+          - action: delete_label_value
+            label: database
+            # label_value specifies the label value for which points should be deleted.
+            label_value: db11
+
+  # Convert data type (double -> int or int -> double).
+  metricstransform/convert_data_type:
+    transforms:
+      - include: postgresql.databases.size_bytes
+        action: update
+        operations:
+          - action: toggle_scalar_data_type
+
+  # Aggregate points that have the labels excluded in label_set.
+  # NOTE: Only the sum aggregation function is supported for histogram and exponential histogram datatypes.
+  metricstransform/aggregate_labels:
+    transforms:
+      - include: postgresql.activity.connections
+        action: update
+        operations:
+          - action: aggregate_labels
+            # label_set contains a list of labels that will remain after aggregation.
+            label_set:
+              #- database
+              - user
+              #- backend_process_state
+            # Aggregation_type defines how combined data points will be aggregated.
+            # Possible values: sum, mean, min, max, count, median.
+            aggregation_type: sum
+
+  # Aggregate data points that have a specific label value.
+  # NOTE: Only the sum aggregation function is supported for histogram and exponential histogram datatypes.
+  metricstransform/aggregate_label_values:
+    transforms:
+      - include: postgresql.activity.connections
+        action: update
+        operations:
+          - action: aggregate_label_values
+            label: database
+            # aggregated_values contains a list of label values that will be aggregated.
+            aggregated_values: [ db11, db12, db13 ]
+            new_value: all_db1
+            aggregation_type: sum
+
+  # Combine a set of metrics `postgresql.databases.tuples_*` into a single -> `postgresql.databases.tuples_total{type=...}`.
+  metricstransform/combine_metrics:
+    transforms:
+      - include: ^postgresql\.databases\.tuples_(?P<type>.*)$$
+        match_type: regexp
+        action: combine
+        new_name: postgresql.databases.tuples_total
+        # submatch_case specifies the case that should be used when adding label values based on regexp submatches when performing a combine action.
+        # Leave blank to use the submatch value as is.
+        # Possible values: lower, upper.
+        submatch_case: lower
+
+  # Group metrics from a single resource and report them as multiple resource metrics.
+  metricstransform/group_metrics:
+    transforms:
+      - include: ^postgresql.databases.size_bytes$$
+        match_type: regexp
+        action: group
+        group_resource_labels: {"resource.type": "default", "source": "default"}
+      - include: ^postgresql.databases.orphaned_files_size_bytes$$
+        match_type: regexp
+        action: group
+        group_resource_labels: {"resource.type": "orphaned", "source": "orphaned"}
+
+  # Create new metric `postgresql.db1.size` when matched by label value.
+  metricstransform/experimental_create_by_label:
+    transforms:
+      - include: postgresql.databases.size_bytes
+        match_type: regexp
+        # experimental_match_labels specifies the label set against which the metric filter will work.
+        # If experimental_match_labels is specified, transforms will only be applied to those metrics which have the provided metric label values.
+        # This works for both 'strict' and 'regexp' match_type.
+        # This is an experimental feature.
+        experimental_match_labels: {"database": "db1.*"}
+        action: insert
+        new_name: postgresql.db1.size
+  
+  # Scale `postgresql.databases.size_bytes` from bytes to bits.
+  metricstransform/experimental_scale_value:
+    transforms:
+      - include: postgresql.databases.size_bytes
+        match_type: strict
+        action: insert
+        new_name: postgresql.databases.size_bits
+        operations:
+          - action: experimental_scale_value
+            # experimental_scale specifies the scalar to apply to values.
+            # Scaling exponential histograms inherently involves some loss of accuracy.
+            experimental_scale: 8
+
+exporters:
+  prometheus:
+    endpoint: :8889
+    send_timestamps: true
+    #
+    # See: https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusexporter
+    # translation_strategy: UnderscoreEscapingWithoutSuffixes
+    #
+    # If enabled is true, all the resource attributes will be converted to metric labels by default.
+    # resource_to_telemetry_conversion:
+    #   enabled: true
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - postgrespro
+      processors:
+        - metricstransform/rename
+        # - metricstransform/rename_by_regexp
+        # - metricstransform/create_new
+        # - metricstransform/add_label
+        # - metricstransform/rename_label
+        # - metricstransform/rename_label_multiple
+        # - metricstransform/rename_label_value
+        # - metricstransform/delete_by_label_value
+        # - metricstransform/convert_data_type
+        # - metricstransform/aggregate_labels
+        # - metricstransform/aggregate_label_values
+        # - metricstransform/combine_metrics
+        # - metricstransform/group_metrics
+        # - metricstransform/experimental_create_by_label
+        # - metricstransform/experimental_scale_value
+      exporters:
+        - prometheus

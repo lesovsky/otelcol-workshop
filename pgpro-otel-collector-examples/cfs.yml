@@ -1,0 +1,8 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes CFS (Compressed File System) metrics. Uses connection to the default database.
+      # Available only for Postgres Pro Enterprise.
+      cfs:
+        enabled: true

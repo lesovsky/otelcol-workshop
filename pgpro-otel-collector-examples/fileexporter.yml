@@ -1,0 +1,71 @@
+# Fileexporter config example.
+#
+# Use with basic.yml config:
+# build/pgpro-otel-collector/pgpro-otel-collector --config configs/basic.yml --config configs/fileexporter.yml
+#
+# Full features list is available at:
+# https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/fileexporter
+exporters:
+    file:
+      # Where to write information.
+      path: ./log/pgpro-otel-collector.json # could be /dev/stdout
+
+      # Settings to rotate telemetry files.
+      # When file rotated it is renamed by putting the current time in a timestamp in the name before the file's extension.
+      # Then a new telemetry file will be created at the original path.
+      rotation:
+        # The maximum size in megabytes of the telemetry file before it is rotated.
+        max_megabytes: 100
+        # The maximum number of old telemetry files to retain.
+        max_backups: 100
+        # The maximum number of days to retain telemetry files based on the timestamp encoded in their filename.
+        # max_days: 7
+        # Whether the timestamps in backup filenames are formatted according to the host's local time.
+        # localtime: true
+
+      # The data format of encoded telemetry data.
+      # JSON is a human-readable. Proto is more compact and efficient in terms of space but requires unmarshaling.
+      format: json # or proto
+
+      # Use an encoding extension to encode telemetry data.
+      # encoding: text_encoding # see https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/extension/encoding/README.md
+
+      # Defines whether append to the file (true) or truncate (false).
+      # If true then setting rotation or compression is not supported.
+      # append: true
+
+      # The compression algorithm used when exporting telemetry data to file.
+      # NOTE: Compression can save a lot of disk space, so we recommend considering enabling this option.
+      # compression: zstd
+
+      # Time interval between flushes.
+      # Ignored and writes are not buffered if rotation is set.
+      # flush_interval: 1s # see https://pkg.go.dev/time#ParseDuration for valid formats.
+
+      # Allows writing to separate files based on a resource attribute.
+      #
+      # For instance, if you want to separate files based on the 'service.name' attribute, you can configure it accordingly.
+      #
+      # Change the file path pattern to: './log/pgpro-otel-collector-*.json'.
+      # Set the resource_attribute parameter to 'service.name'.
+      #
+      # When a metric or log with the attribute service.name=postgresql is received, it will be written to './log/pgpro-otel-collector-postgresql.json'.
+      #
+      # Attribute values can include path separators (e.g., '../etc/my_config' is a valid value).
+      #
+      # NOTE: This feature supports only a single resource attribute.
+      # group_by:
+        # enabled: true
+
+        # Specifies the name of the resource attribute that contains the path segment of the file to write to. 
+        # The final path will be the path config value, with the * replaced with the value of this resource attribute.
+        # resource_attribute: service.name
+
+        # Specifies the maximum number of open file descriptors for the output files.
+        # max_open_files: 100
+service:
+  pipelines:
+    metrics/file:
+      receivers: [ postgrespro ]
+      processors: [ batch/metrics ]
+      exporters: [ file ]

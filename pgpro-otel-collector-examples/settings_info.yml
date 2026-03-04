@@ -1,0 +1,21 @@
+# Settings config example.
+#
+# Run the collector with the 'settings_info' plugin enabled:
+# build/pgpro-otel-collector/pgpro-otel-collector --config configs/basic.yml --config configs/settings_info.yml
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Sends rows from the 'pg_settings' view as metrics, with setting values included as attributes.
+      settings_info:
+        enabled: true
+        # The `collect` parameter specifies which settings should be collected using regular expressions.
+        # When empty, all settings are gathered (except those matched by the `ignore` parameter).
+        collect: >-
+         ^(fsync|synchronous_commit|archive_command|synchronous_standby_names
+         |shared_buffers|huge_pages|.*work_mem|temp_buffer|max_connections
+         |autovacuum_.*|bgwriter_.*|tcp_keepalives_.*|.*_preload_libraries)$
+        # The `ignore` parameter allows skipping settings by their names using a regular expression.
+        # `ignore` has higher priority than `collect`.
+        # ignore: >-
+        #  ^(debug_.*)$

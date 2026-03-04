@@ -1,0 +1,170 @@
+# Journald + PPEM configuration example.
+# 
+# Follow these steps to configure PostgreSQL to log via journald and integrate it with PPEM using the OpenTelemetry Collector.
+#
+# 1. Set the log_destination to syslog in both `postgresql.conf` and `postgresql.auto.conf`:
+# (You can verify the current setting with the query:
+#     SELECT * FROM pg_settings WHERE name = 'log_destination';)
+# Example:
+# log_destination = 'syslog'
+# 
+# 2. Add the following line in /etc/rsyslog.d/*.conf (for Ubuntu). For more details, see: https://www.postgresql.org/docs/current/runtime-config-logging.html):
+# local0.*    /var/log/postgresql
+#
+# 3. Restart the PostgreSQL service:
+# sudo systemctl restart postgresql@17-main.service
+#
+# 4. Update the following settings:
+# - `service.instance.id` under `resource.attributes`
+# - `exporters.otlphttp.endpoint`
+# - `"X-Ppem-Source-Agent-Name"` in `exporters.otlphttp.headers`
+# - `journald.units` (if needed)
+#
+# 5. Start the pgpro-otel-collector using the configured file:
+#    /usr/bin/pgpro-otel-collector --config /etc/pgpro-otel-collector/ppem_journald.yml
+#
+# Additional configuration options are available in the journald.yml example file.
+#
+# See: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/journaldreceiver/README.md
+receivers:
+  journald:
+    # A directory containing journal files to read entries from.
+    # The default location depends on the system configuration.
+    # Common defaults include:
+    #   - '/run/log/journal' or '/run/journal' on most systems
+    #   - '/var/log/journal' on Debian and Ubuntu
+    # directory: /var/log/journal
+
+    # Where to start reading logs from the file.
+    # Options: 'beginning' or 'end'
+    #
+    # WARNING: Before syslog output is enabled, existing logs may be incompatible.
+    # It's safer to use 'end' here.
+    start_at: end
+
+    # A list of units to read entries from.
+    units:
+     - postgresql@17-main
+
+    # An array of operators.
+    #
+    # Only parsers and general purpose operators should be used.
+    # Operators will output to the next operator in the pipeline. 
+    # The last operator in the pipeline will emit from the receiver.
+    #
+    # See: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/journaldreceiver/README.md#operators
+    # A list of operators is available here: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/pkg/stanza/docs/operators/README.md
+    #
+    # WARNING: Fields extracted from syslog may vary across systems.
+    # Be sure to verify and adjust this section as needed for your environment.
+    operators:
+      # Rename _PID to pid. This field is required by PPEM.
+      - type: move
+        id: "pid"
+        from: body._PID
+        to: attributes.pid
+      # Rename __MONOTONIC_TIMESTAMP to line_num. This field is required by PPEM.
+      - type: move
+        id: "line_num"
+        from: body.__MONOTONIC_TIMESTAMP
+        to: attributes.line_num
+      # Rename MESSAGE to message.
+      - type: move
+        id: "message"
+        from: body.MESSAGE
+        to: attributes.message
+      # Rename _SYSTEMD_UNIT to backend_type.
+      - type: move
+        id: "backend_type"
+        field: attributes.backend_type
+        from: body._SYSTEMD_UNIT
+        to: attributes.backend_type
+      # Transform PRIORITY number to severity text.
+      - type: severity_parser
+        parse_from: body.PRIORITY
+        overwrite_text: true
+        mapping:
+            debug: [ 7 ] # debug
+            info:  [ 5, 6 ] # notice, info
+            warn:  [ 4 ] # warning
+            error: [ 3 ] # err
+            fatal: [ 0, 1, 2 ] # emerg, alert, crit
+
+    # If receiver encounters an error from downstream components and retry is enabled, 
+    # then receiver will pause reading a file and attempt to resend the current batch of logs.
+    # See: https://pkg.go.dev/go.opentelemetry.io/collector/exporter/exporterhelper
+    retry_on_failure:
+      enabled: true
+      # The time to wait after the first failure.
+      initial_interval: 1s
+      # The maximum backoff interval. Once this value is reached, the delay between retries will always be `max_interval`. 
+      max_interval: 30s
+      # The maximum total time (including retries) spent attempting to send batch.
+      # Once this duration is exceeded, data will be discarded. 
+      # If set to 0, retries will continue indefinitely.
+      max_elapsed_time: 300s
+
+processors:
+  batch/journald:
+    send_batch_size: 4096
+    timeout: 15s
+  # The resource processor can be used to apply changes on resource attributes.
+  resource:
+    attributes:
+    # Service name, required field for external storage (ELK). Sets the index that will be used to store logs. Optional field for internal storage.
+    - action: upsert
+      key: service.name
+      value: postgresql
+    # Unique instance identifier, required  field for external storage (ELK). Allows to identify a log line bound to a specific instance. Optional field for internal storage.
+    # This field is required by PPEM.
+    - action: upsert
+      key: service.instance.id
+      value: address-of-postgres-instance:5432
+  # The attributes processor modifies attributes of logs.
+  attributes/convert:
+    actions:
+      # convert pid to integer
+      - key: pid
+        action: convert
+        converted_type: int
+      # convert line_num to integer
+      - key: line_num
+        action: convert
+        converted_type: int
+  transform:
+    log_statements:
+      - context: log
+        statements:
+          # Set the error_severity attribute from the severity_text field. This field is required by PPEM.
+          - set(log.attributes["error_severity"], log.severity_text)
+          # Set the session_start attribute. This field is required by PPEM.
+          - set(log.attributes["session_start"], FormatTime(log.time, "%Y-%m-%d %H:%M:%S %Z"))
+          # Set `session_id` field from _SYSTEMD_INVOCATION_ID or INVOCATION_ID. This field is required by PPEM.
+          - set(log.attributes["session_id"], log.body["_SYSTEMD_INVOCATION_ID"]) where log.body["_SYSTEMD_INVOCATION_ID"] != nil
+          - set(log.attributes["session_id"], log.body["INVOCATION_ID"]) where (log.attributes["session_id"] == nil and log.body["INVOCATION_ID"] != nil)
+
+# Exporters send data to one or more backends or destinations.
+exporters:
+  # Export logs via HTTP using OTLP format.
+  otlphttp:
+    # The target base URL to send data, without suffix, (by default the collector adds /v1/logs)
+    endpoint: https://logs.example.org:8080 # e.g. http://127.0.0.1:8200
+    tls:
+      # whether to skip verifying the certificate.
+      insecure_skip_verify: true
+    compression: ""
+    # Extra HTTP headers attached to outgoing requests
+    headers:
+      # Name of PPEM agent which have to be associated with this collector instance.
+      # Have to be used only when exporting data to PostgresPro Enterprise Manager.
+      "X-Ppem-Source-Agent-Name": ppem-agent # e.g. local
+      # Network port of database instance from which metrics have been collected.
+      # Have to be used only when exporting data to PostgresPro Enterprise Manager.
+      "X-Ppem-Source-Instance-Port": '5432'
+service:
+  telemetry:
+  pipelines:
+    logs:
+      receivers: [ journald ]
+      processors: [ resource,attributes/convert,transform,batch/journald ]
+      exporters: [ otlphttp ]

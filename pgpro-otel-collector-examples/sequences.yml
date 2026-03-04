@@ -1,0 +1,18 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = sequence
+      # Includes sequence usage statistics. Uses connections for each defined database and for default database.
+      # Without a list of databases, plugin will gather statistics from all instance sequences.
+      # With a list of databases, plugin will collect statistics from all specified databases.
+      # With a list of databases and their schemas, plugin will collect statistics from all specified database schemas.
+      # With a list of databases, schemas and their sequences, plugin will collect statistics on certain sequences.
+      sequences:
+        enabled: true
+        # databases:
+        # - name: db1
+        #   schemas:
+        #     - name: public
+        #       sequences:
+        #         - name: seq1
+        #         - name: seq.*

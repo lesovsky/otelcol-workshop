@@ -1,0 +1,8 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes PostgreSQL recovery statistics such as conflicts and state. 
+      # Should be enabled only for the standby servers.
+      recovery:
+        enabled: true

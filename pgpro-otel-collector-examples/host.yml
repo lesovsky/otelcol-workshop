@@ -1,0 +1,63 @@
+receivers:
+  hostmetrics:
+    collection_interval: 60s
+    initial_delay: 1s
+    scrapers:
+      cpu:
+        # CPU utilization metrics
+      disk:
+        # Disk I/O metrics
+        #
+        # <include|exclude>:
+        #   devices: [ <device name>, ... ]
+        #   match_type: <strict|regexp>
+      load:
+        # CPU load metrics
+        #
+        # cpu_average: <false|true>
+      filesystem:
+        # File System utilization metrics
+        #
+        # <include_devices|exclude_devices>:
+        #   devices: [ <device name>, ... ]
+        #   match_type: <strict|regexp>
+        # <include_fs_types|exclude_fs_types>:
+        #   fs_types: [ <filesystem type>, ... ]
+        #   match_type: <strict|regexp>
+        # <include_mount_points|exclude_mount_points>:
+        #   mount_points: [ <mount point>, ... ]
+        #   match_type: <strict|regexp>
+      memory:
+        # Memory utilization metrics
+      network:
+        # Network interface I/O metrics & TCP connection metrics
+        #
+        # <include|exclude>:
+        #   interfaces: [ <interface name>, ... ]
+        #   match_type: <strict|regexp>
+      paging:
+        # Paging/Swap space utilization and I/O metrics
+      processes:
+        # Process count metrics
+      process:
+        # Per process CPU, Memory, and Disk I/O metrics
+        #
+        # <include|exclude>:
+        #   names: [ <process name>, ... ]
+        #   match_type: <strict|regexp>
+        # A large number of processes come from the kernel and don't have actual executables.
+        # So `mute_process_exe_error` is enabled by default to hide such "errors".
+        mute_process_exe_error: true
+        # mute_process_name_error: <true|false>
+        # mute_process_io_error: <true|false>
+        # mute_process_user_error: <true|false>
+        # mute_process_cgroup_error: <true|false>
+        # scrape_process_delay: <time>
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - postgrespro
+        - hostmetrics
+      exporters:
+        - prometheus

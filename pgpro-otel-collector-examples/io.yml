@@ -1,0 +1,7 @@
+receivers:
+  postgrespro:
+    plugins:
+      # level = instance
+      # Includes PostgreSQL IO statistics. Uses connection to the default database.
+      io:
+        enabled: true
