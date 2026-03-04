@@ -88,11 +88,16 @@ paginate: true
 
 Перейдите к разделу 5.4 в workshop-guide.
 
+Сначала сгенерируем ошибку:
+```bash
+docker exec workshop-postgres psql -U postgres -c "SELECT * FROM nonexistent_table;"
+```
+
 1. Откройте дашборд **PostgreSQL Workshop**
 2. **Add → Visualization**
-3. Datasource: **VictoriaLogs**
-4. Тип: **Logs**
-5. Запрос: `error_severity:ERROR OR error_severity:WARNING`
+3. Datasource: **VictoriaLogs**, Query type: **Logs**
+4. Запрос: `error_severity:ERROR OR error_severity:WARNING`
+5. Визуализация: **Logs**
 6. Сохраните панель
 
 Метрики и логи — на одном дашборде.

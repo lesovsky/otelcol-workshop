@@ -52,7 +52,7 @@ services:
       - "8888:8888"
       - "8889:8889"
     volumes:
-      - ./configs/otel-collector/config-step3.yaml:/etc/pgpro-otel-collector/config.yaml:ro
+      - ./configs/otel-collector/config-step1.yaml:/etc/pgpro-otel-collector/config.yaml:ro
       - pg_logs:/var/log/postgresql:ro
     depends_on:
       postgres:
@@ -88,7 +88,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_PASSWORD: workshop
       GF_INSTALL_PLUGINS: "https://github.com/VictoriaMetrics/victorialogs-datasource/releases/download/v0.14.1/victoriametrics-logs-datasource-v0.14.1.zip;victorialogs-datasource"
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: victorialogs-datasource
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: victoriametrics-logs-datasource
     volumes:
       - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
