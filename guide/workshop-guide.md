@@ -68,14 +68,16 @@ git clone https://github.com/lesovsky/otelcol-workshop.git
 cd otelcol-workshop
 ```
 
-> **Важно:** Первый запуск загрузит Docker-образы (~2 ГБ). Рекомендуется скачать их **заранее**, чтобы не зависеть от интернета на площадке:
+> **Важно:** Первый запуск загрузит Docker-образы (~2 ГБ). Рекомендуется скачать их **заранее**, чтобы не зависеть от интернета на площадке.
+>
+> Если загрузка образов завершается ошибкой `Too Many Requests`, выполните `docker login` — Docker Hub ограничивает количество загрузок для анонимных пользователей.
 >
 > ```bash
 > docker pull postgres:18
 > docker pull victoriametrics/victoria-metrics:v1.137.0
 > docker pull victoriametrics/victoria-logs:v1.47.0
 > docker pull grafana/grafana:12.4.0
-> docker pull debian:bookworm-slim
+> docker pull debian:trixie-slim
 > ```
 >
 > Образ PGPRO OTEL Collector будет собран локально на воркшопе из Dockerfile.
@@ -470,6 +472,8 @@ processors:
         value: postgres:5432
 ```
 
+Эти атрибуты формируют **`_stream`** в VictoriaLogs — по нему строится индекс для быстрого поиска и группировки логов.
+
 ### Шаг 4.2. Пайплайн логов
 
 В `config-step3.yaml` появляется отдельный пайплайн для логов:
@@ -625,7 +629,7 @@ docker exec workshop-postgres psql -U postgres -c "SELECT * FROM nonexistent_tab
 1. Откройте дашборд **PostgreSQL Workshop**
 2. Нажмите **Add → Visualization**
 3. Выберите datasource **VictoriaLogs**
-4. В редакторе запроса переключите **Query type** на **Logs**
+4. В редакторе запроса переключите **Query type** на **Raw Logs**
 5. Запрос: `error_severity:ERROR OR error_severity:WARNING`
 6. Тип визуализации (правая панель) — **Logs**
 7. Заголовок панели: **PostgreSQL Errors & Warnings**

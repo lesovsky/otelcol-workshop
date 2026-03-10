@@ -40,7 +40,7 @@ docker pull postgres:18
 docker pull victoriametrics/victoria-metrics:v1.137.0
 docker pull victoriametrics/victoria-logs:v1.47.0
 docker pull grafana/grafana:12.4.0
-docker pull debian:bookworm-slim
+docker pull debian:trixie-slim
 ```
 
 ### Запуск
