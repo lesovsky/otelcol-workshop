@@ -97,6 +97,17 @@ services:
       - victorialogs
     restart: unless-stopped
 
+  webapp:
+    build:
+      context: ./webapp
+    container_name: workshop-webapp
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./slides:/data/content/slides:ro
+      - ./guide:/data/content/guide:ro
+    restart: unless-stopped
+
 volumes:
   pg_data:
   pg_logs:
