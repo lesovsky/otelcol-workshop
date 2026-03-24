@@ -39,6 +39,21 @@ exporters:
 
 ---
 
+## Transform processor
+
+Метрики с пустой единицей измерения получают суффикс `_unixtime` в VictoriaMetrics. Исправляем через transform processor:
+
+```yaml
+processors:
+  transform:
+    metric_statements:
+      - context: metric
+        statements:
+          - set(unit, "1") where unit == ""
+```
+
+---
+
 ## Обновлённый пайплайн — config-step2
 
 ```yaml
@@ -50,12 +65,14 @@ service:
         - hostmetrics
       processors:
         - memory_limiter/metrics
+        - transform           # исправление unit для VM
+        - batch/metrics
       exporters:
         - prometheus        # для проверки (остаётся)
         - otlphttp          # → VictoriaMetrics (новый)
 ```
 
-Добавлен `otlphttp` в exporters — метрики теперь идут в VictoriaMetrics.
+Добавлены `transform`, `batch/metrics` и `otlphttp`.
 
 ---
 
@@ -111,8 +128,8 @@ postgresql_health_uptime_milliseconds
 |--------|---------------|
 | `postgresql_health_uptime_milliseconds` | Uptime |
 | `postgresql_activity_connections` | Соединения |
-| `rate(postgresql_databases_commits_unixtime_total[1m])` | Скорость коммитов |
-| `postgresql_cache_hit_ratio_unixtime` | Cache hit ratio |
+| `rate(postgresql_databases_commits_total[1m])` | Скорость коммитов |
+| `postgresql_cache_hit_ratio` | Cache hit ratio |
 | `system_memory_usage_bytes` | Использование памяти |
 
 ---

@@ -64,7 +64,7 @@ receivers:
 | `databases` | Транзакции, блоки, temp-файлы |
 | `locks` | Блокировки |
 | `wal` | Статистика WAL |
-| `health` | Uptime, здоровье инстанса |
+| `health` | Uptime и время запуска инстанса |
 
 ---
 

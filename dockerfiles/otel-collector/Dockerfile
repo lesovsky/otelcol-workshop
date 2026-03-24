@@ -6,8 +6,9 @@ ARG OTELCOL_URL=https://repo.postgrespro.ru/otelcol/otelcol/debian/pool/main/o/o
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl && \
-    curl -fsSL -o /tmp/${OTELCOL_PKG} ${OTELCOL_URL} && \
+    curl -fsSL --retry 3 --retry-delay 5 -o /tmp/${OTELCOL_PKG} ${OTELCOL_URL} && \
     dpkg -i /tmp/${OTELCOL_PKG} || apt-get install -y -f --no-install-recommends && \
+    pgpro-otel-collector --version && \
     rm -f /tmp/${OTELCOL_PKG} && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

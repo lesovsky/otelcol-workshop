@@ -38,11 +38,11 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_checkpointer_num_requested_unixtime_total[5m])",
+          "expr": "rate(postgresql_checkpointer_num_requested_total[5m])",
           "legendFormat": "requested"
         },
         {
-          "expr": "rate(postgresql_checkpointer_num_timed_unixtime_total[5m])",
+          "expr": "rate(postgresql_checkpointer_num_timed_total[5m])",
           "legendFormat": "timed"
         }
       ]
@@ -67,7 +67,7 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_checkpointer_num_done_unixtime_total[5m])",
+          "expr": "rate(postgresql_checkpointer_num_done_total[5m])",
           "legendFormat": "completed"
         }
       ]
@@ -130,11 +130,11 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_checkpointer_buffers_written_unixtime_total[5m])",
+          "expr": "rate(postgresql_checkpointer_buffers_written_total[5m])",
           "legendFormat": "checkpointer buffers"
         },
         {
-          "expr": "rate(postgresql_checkpointer_slru_written_unixtime_total[5m])",
+          "expr": "rate(postgresql_checkpointer_slru_written_total[5m])",
           "legendFormat": "SLRU pages"
         }
       ]
@@ -159,7 +159,7 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_bgwriter_buffers_clean_unixtime_total[5m])",
+          "expr": "rate(postgresql_bgwriter_buffers_clean_total[5m])",
           "legendFormat": "buffers cleaned"
         }
       ]
@@ -184,7 +184,7 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_bgwriter_buffers_allocated_unixtime_total[5m])",
+          "expr": "rate(postgresql_bgwriter_buffers_allocated_total[5m])",
           "legendFormat": "buffers allocated"
         }
       ]
@@ -216,7 +216,7 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_bgwriter_maxwritten_clean_unixtime_total[5m])",
+          "expr": "rate(postgresql_bgwriter_maxwritten_clean_total[5m])",
           "legendFormat": "maxwritten stops"
         }
       ]
@@ -241,15 +241,15 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_checkpointer_restartpoints_timed_unixtime_total[5m])",
+          "expr": "rate(postgresql_checkpointer_restartpoints_timed_total[5m])",
           "legendFormat": "timed"
         },
         {
-          "expr": "rate(postgresql_checkpointer_restartpoints_req_unixtime_total[5m])",
+          "expr": "rate(postgresql_checkpointer_restartpoints_req_total[5m])",
           "legendFormat": "requested"
         },
         {
-          "expr": "rate(postgresql_checkpointer_restartpoints_done_unixtime_total[5m])",
+          "expr": "rate(postgresql_checkpointer_restartpoints_done_total[5m])",
           "legendFormat": "done"
         }
       ]

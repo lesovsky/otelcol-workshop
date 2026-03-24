@@ -84,7 +84,7 @@
       },
       "targets": [
         {
-          "expr": "postgresql_cache_hit_ratio_unixtime",
+          "expr": "postgresql_cache_hit_ratio",
           "legendFormat": "{{ database }}"
         }
       ]
@@ -112,7 +112,7 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_databases_deadlocks_unixtime_total[5m])",
+          "expr": "rate(postgresql_databases_deadlocks_total[5m])",
           "legendFormat": "{{ database }}"
         }
       ]
@@ -144,7 +144,7 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_databases_commits_unixtime_total[1m])",
+          "expr": "rate(postgresql_databases_commits_total[1m])",
           "legendFormat": "commits {{ database }}"
         },
         {
@@ -395,11 +395,11 @@
       },
       "targets": [
         {
-          "expr": "rate(postgresql_databases_conflicts_unixtime_total[1m])",
+          "expr": "rate(postgresql_databases_conflicts_total[1m])",
           "legendFormat": "conflicts {{ database }}"
         },
         {
-          "expr": "rate(postgresql_databases_deadlocks_unixtime_total[1m])",
+          "expr": "rate(postgresql_databases_deadlocks_total[1m])",
           "legendFormat": "deadlocks {{ database }}"
         }
       ]

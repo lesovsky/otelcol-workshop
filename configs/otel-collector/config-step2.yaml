@@ -78,6 +78,14 @@ processors:
   memory_limiter/metrics:
     check_interval: 1s
     limit_mib: 512
+  batch/metrics:
+    send_batch_size: 8192
+    timeout: 10s
+  transform:
+    metric_statements:
+      - context: metric
+        statements:
+          - set(unit, "1") where unit == ""
 
 service:
   telemetry:
@@ -100,6 +108,8 @@ service:
         - hostmetrics
       processors:
         - memory_limiter/metrics
+        - transform
+        - batch/metrics
       exporters:
         - prometheus
         - otlphttp

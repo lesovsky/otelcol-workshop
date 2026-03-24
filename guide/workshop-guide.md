@@ -81,6 +81,13 @@ cd otelcol-workshop
 > ```
 >
 > Образ PGPRO OTEL Collector будет собран локально на воркшопе из Dockerfile.
+>
+> **macOS на Apple Silicon (M1/M2/M3):** Если сборка образа коллектора завершается ошибкой, замените в `dockerfiles/otel-collector/Dockerfile` первую строку и имя пакета:
+> ```dockerfile
+> FROM --platform=linux/arm64 debian:trixie-slim
+> ...
+> ARG OTELCOL_PKG=pgpro-otel-collector_${OTELCOL_VERSION}.bookworm_arm64.deb
+> ```
 
 ---
 
@@ -208,7 +215,7 @@ receivers:
 | `cache` | instance | Cache hit/miss ratio |
 | `checkpointer` | instance | Статистика контрольных точек |
 | `databases` | database | Транзакции, блоки, temp-файлы, конфликты |
-| `health` | instance | Uptime и здоровье инстанса |
+| `health` | instance | Uptime и время запуска инстанса |
 | `io` | instance | Статистика ввода-вывода |
 | `locks` | instance | Блокировки |
 | `replication` | instance | Репликация (для primary) |
@@ -339,7 +346,18 @@ exporters:
     encoding: proto
 ```
 
-И пайплайн обновлён — добавлен `otlphttp` в exporters:
+**Transform processor** — исправляет имена метрик при передаче через OTLP. VictoriaMetrics с `usePrometheusNaming` добавляет суффикс `_unixtime` к метрикам с пустой единицей измерения. Transform ставит им единицу `"1"`:
+
+```yaml
+processors:
+  transform:
+    metric_statements:
+      - context: metric
+        statements:
+          - set(unit, "1") where unit == ""
+```
+
+И пайплайн обновлён — добавлены `transform`, `batch/metrics` и `otlphttp` в exporters:
 
 ```yaml
 service:
@@ -350,6 +368,8 @@ service:
         - hostmetrics
       processors:
         - memory_limiter/metrics
+        - transform
+        - batch/metrics
       exporters:
         - prometheus      # для проверки
         - otlphttp        # → VictoriaMetrics
@@ -409,8 +429,8 @@ curl -s 'http://localhost:8428/api/v1/query?query=postgresql_activity_connection
 |--------|---------------|
 | `postgresql_health_uptime_milliseconds` | Время работы PostgreSQL |
 | `postgresql_activity_connections` | Активные соединения |
-| `rate(postgresql_databases_commits_unixtime_total[1m])` | Скорость коммитов |
-| `postgresql_cache_hit_ratio_unixtime` | Cache hit ratio |
+| `rate(postgresql_databases_commits_total[1m])` | Скорость коммитов |
+| `postgresql_cache_hit_ratio` | Cache hit ratio |
 | `system_memory_usage_bytes` | Использование памяти |
 
 ---
@@ -483,7 +503,7 @@ service:
   pipelines:
     metrics:                    # пайплайн метрик (без изменений)
       receivers: [postgrespro, hostmetrics]
-      processors: [memory_limiter/metrics]
+      processors: [memory_limiter/metrics, transform, batch/metrics]
       exporters: [prometheus, otlphttp]
 
     logs:                       # новый пайплайн логов
@@ -586,8 +606,8 @@ Datasources уже настроены через provisioning:
 |--------|---------|---------------|
 | PostgreSQL Uptime | `postgresql_health_uptime_milliseconds` | Время работы |
 | Active Connections | `postgresql_activity_connections` | Соединения по состояниям |
-| Transactions | `rate(postgresql_databases_commits_unixtime_total[1m])` | Скорость транзакций |
-| Cache Hit Ratio | `postgresql_cache_hit_ratio_unixtime` | Эффективность кэша |
+| Transactions | `rate(postgresql_databases_commits_total[1m])` | Скорость транзакций |
+| Cache Hit Ratio | `postgresql_cache_hit_ratio` | Эффективность кэша |
 | WAL Generation | `rate(postgresql_wal_bytes_total[1m])` | Скорость генерации WAL |
 | Locks | `postgresql_locks_all_milliseconds` | Блокировки по типам |
 | CPU Usage | `rate(system_cpu_time_seconds_total[1m])` | Использование CPU |

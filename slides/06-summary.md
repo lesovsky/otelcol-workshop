@@ -78,7 +78,7 @@ paginate: true
 |--------|-------------|
 | `replication_slots` | Слоты репликации |
 | `subscriptions` | Логическая репликация (подписки) |
-| `prepared_xacts` | Подготовленные (двухфазные) транзакции |
+| `prepared_transactions` | Подготовленные (двухфазные) транзакции |
 | `sequences` | Использование последовательностей |
 | `recovery` | Статистика восстановления |
 | `biha` | BiHA — встроенная высокая доступность |
@@ -94,12 +94,17 @@ paginate: true
   - Поддержка регулярных выражений
 
 ```yaml
-plugins:
-  tables:
-    enabled: true
+receivers:
+  postgrespro:
     acl:
       databases:
-        deny: ["template0", "template1"]
+        deny:
+          - name: template0
+          - name: template1
+    plugins:
+      tables:
+        databases:
+          - name: mydb
 ```
 
 ---
