@@ -444,6 +444,8 @@ body {
   flex-direction: column;
   border-top: 1px solid var(--border);
   background: var(--bg-base);
+  position: relative;
+  z-index: 5;
 }
 
 .bottom-nav-row {
@@ -520,6 +522,23 @@ body {
   text-align: center;
   min-height: 60vh;
   padding: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Welcome background — fills entire content area */
+.welcome-bg {
+  position: fixed;
+  top: 44px;
+  bottom: 52px;
+  left: var(--sidebar-w);
+  right: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+#sidebar.collapsed ~ #main .welcome-bg {
+  left: 0;
 }
 
 .welcome-icon {
@@ -682,6 +701,85 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* ---- Title Slide ---- */
+.title-slide {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 44px - 52px - 6rem);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* Polygon network background — fills entire content area beyond padding */
+.title-slide-bg {
+  position: fixed;
+  top: 44px;          /* below toolbar */
+  bottom: 52px;       /* above footer */
+  left: var(--sidebar-w);
+  right: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+#sidebar.collapsed ~ #main .title-slide-bg {
+  left: 0;
+}
+
+
+.title-slide .step-badge {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.title-slide h1 {
+  font-size: 2.2rem;
+  margin-top: 0;
+  position: relative;
+}
+
+/* Subtle glow behind heading */
+.title-slide h1::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -20px;
+  width: 4px;
+  height: 60%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, var(--primary), var(--accent));
+  border-radius: 2px;
+  opacity: 0.6;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+}
+
+.title-slide-footer {
+  margin-top: auto;
+  position: relative;
+}
+
+.title-slide-footer p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.2rem;
+}
+
+.title-slide-footer a {
+  color: var(--primary);
+}
+
+/* Decorative data-flow dots */
+.title-slide-footer::before {
+  content: '';
+  display: block;
+  width: 120px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--accent), transparent);
+  margin-bottom: 1rem;
+  border-radius: 1px;
+  opacity: 0.5;
+}
+
 /* ---- Horizontal Rule (slide separator visual) ---- */
 .content-inner hr {
   border: none;
@@ -699,6 +797,8 @@ body {
   border-bottom: 1px solid var(--border);
   background: var(--bg-base);
   min-height: 44px;
+  position: relative;
+  z-index: 5;
 }
 
 .toolbar-left, .toolbar-right {

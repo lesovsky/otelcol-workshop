@@ -166,18 +166,13 @@ service:
 
 ---
 
-## Практика: запуск окружения
+## Итоги
 
-Перейдите к разделу 1 в workshop-guide.
+- OpenTelemetry — единый стандарт для метрик, логов и трейсов
+- Collector: Receivers → Processors → Exporters
+- PGPRO OTEL Collector — нативный сбор метрик PostgreSQL
+- Стек воркшопа: PostgreSQL → Collector → VictoriaMetrics/Logs → Grafana
 
-```bash
-docker compose up -d
-```
-
-```bash
-docker ps --format "table {{.Names}}\t{{.Status}}"
-```
-
-Все контейнеры должны быть в статусе `Up`.
+Переходим к практике.
 
 ---

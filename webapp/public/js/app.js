@@ -2,6 +2,149 @@
    PG + OTel Workshop — SPA Application
    ============================================ */
 
+// ---- Polygon Network Background ----
+function createPolyNetwork(container, opts = {}) {
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'width:100%;height:100%;display:block;opacity:0;transition:opacity 0.6s ease;';
+  container.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  // Colors — warm orange accent
+  const primaryR = 251, primaryG = 146, primaryB = 60;   // bright orange
+  const accentR = 234, accentG = 88, accentB = 12;       // deep orange
+
+  let nodes = [];
+  let edges = [];
+  let w, h;
+
+  function resize() {
+    const rect = container.getBoundingClientRect();
+    w = rect.width;
+    h = rect.height;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    generateNodes();
+    computeEdges();
+  }
+
+  function generateNodes() {
+    nodes = [];
+    // Density increases toward bottom-right corner
+    // Use variable grid spacing: dense at bottom-right, sparse at top-left
+    const baseSpacing = opts.baseSpacing || 80;
+    const minSpacing = opts.minSpacing || 30;
+
+    // Fill area with nodes, spacing varies by distance to bottom-right
+    const maxDist = Math.sqrt(w * w + h * h);
+
+    for (let attempts = 0; attempts < 800; attempts++) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+
+      // Distance from bottom-right (normalized 0..1, 0 = at corner)
+      const dx = (w - x) / w;
+      const dy = (h - y) / h;
+      const dist = Math.sqrt(dx * dx + dy * dy) / Math.SQRT2; // 0..1
+
+      // Probability of keeping this node: high near bottom-right, low at top-left
+      const keepProb = Math.pow(1 - dist, 1.8) * 0.9 + 0.05;
+      if (Math.random() > keepProb) continue;
+
+      // Check minimum distance to existing nodes (also varies)
+      const localMin = minSpacing + dist * (baseSpacing - minSpacing);
+      let tooClose = false;
+      for (const n of nodes) {
+        const d = Math.hypot(n.x - x, n.y - y);
+        if (d < localMin) { tooClose = true; break; }
+      }
+      if (tooClose) continue;
+
+      // Color: blend primary→accent based on position
+      const blend = (x / w) * 0.5 + (y / h) * 0.5;
+      const r = primaryR + (accentR - primaryR) * blend;
+      const g = primaryG + (accentG - primaryG) * blend;
+      const b = primaryB + (accentB - primaryB) * blend;
+
+      // Opacity: stronger near bottom-right
+      const opacity = (1 - dist) * 0.5 + 0.05;
+
+      nodes.push({ x, y, r, g, b, opacity, dist });
+    }
+  }
+
+  function computeEdges() {
+    edges = [];
+    const maxEdgeDist = opts.maxEdgeDist || 120;
+
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
+        // Edge distance threshold: shorter near top-left, longer near bottom-right
+        const avgDist = (nodes[i].dist + nodes[j].dist) / 2;
+        const threshold = maxEdgeDist * (1 - avgDist * 0.5);
+        if (d < threshold) {
+          edges.push({ a: i, b: j, d });
+        }
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw edges
+    for (const e of edges) {
+      const a = nodes[e.a];
+      const b = nodes[e.b];
+      const opacity = Math.min(a.opacity, b.opacity) * 0.4;
+      const midR = (a.r + b.r) / 2;
+      const midG = (a.g + b.g) / 2;
+      const midB = (a.b + b.b) / 2;
+
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = `rgba(${midR|0},${midG|0},${midB|0},${opacity})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    // Draw nodes
+    for (const n of nodes) {
+      // Outer glow
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${n.r|0},${n.g|0},${n.b|0},${n.opacity * 0.3})`;
+      ctx.fill();
+
+      // Core dot
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${n.r|0},${n.g|0},${n.b|0},${n.opacity})`;
+      ctx.fill();
+    }
+  }
+
+  resize();
+  draw();
+
+  // Fade in after first draw
+  requestAnimationFrame(() => { canvas.style.opacity = '1'; });
+
+  // Debounced resize
+  let resizeTimer;
+  const ro = new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { resize(); draw(); }, 150);
+  });
+  ro.observe(container);
+
+  return { destroy: () => { ro.disconnect(); canvas.remove(); } };
+}
+
 // Content flow definition
 const CONTENT_FLOW = [
   { id: 'intro', type: 'slides', source: 'content/slides/01-intro-otel.md', label: 'Введение в OpenTelemetry' },
@@ -111,7 +254,9 @@ function splitGuideSubsections(content) {
 
 function extractTitle(md) {
   const match = md.match(/^#{1,3}\s+(.+)$/m);
-  return match ? match[1].replace(/\*\*/g, '') : '';
+  if (!match) return '';
+  // Strip leading "N. " from guide section headings (e.g. "0. Подготовка" -> "Подготовка")
+  return match[1].replace(/\*\*/g, '').replace(/^\d+\.\s+/, '');
 }
 
 async function loadAllContent() {
@@ -257,16 +402,55 @@ async function renderStep(index) {
           </div>
         </div>
       </div>`;
+
+    // Add polygon network to welcome
+    const welcomeEl = contentEl.querySelector('.welcome');
+    if (welcomeEl) {
+      const bg = document.createElement('div');
+      bg.className = 'welcome-bg';
+      welcomeEl.appendChild(bg);
+      if (window._polyNet) window._polyNet.destroy();
+      window._polyNet = createPolyNetwork(bg, { baseSpacing: 90, minSpacing: 35 });
+    }
   } else {
+    // Destroy poly network on non-title/welcome slides
+    if (window._polyNet) { window._polyNet.destroy(); window._polyNet = null; }
+
     const html = await getStepHtml(step);
     const badgeType = step.type === 'theory' ? 'theory' : 'practice';
     const badgeLabel = step.type === 'theory' ? 'Теория' : 'Практика';
 
+    const isTitleSlide = step.type === 'theory' && step.slideIndex === 0;
+    const innerClass = isTitleSlide ? 'content-inner title-slide' : 'content-inner';
+
     contentEl.innerHTML = `
-      <div class="content-inner">
+      <div class="${innerClass}">
         <div class="step-badge ${badgeType}">${badgeLabel}</div>
         ${html}
       </div>`;
+
+    // For title slides: wrap everything after h1 into title-slide-footer + add poly bg
+    if (isTitleSlide) {
+      const inner = contentEl.querySelector('.title-slide');
+      const h1 = inner.querySelector('h1');
+      if (h1 && !inner.querySelector('.title-slide-footer')) {
+        const footer = document.createElement('div');
+        footer.className = 'title-slide-footer';
+        let sibling = h1.nextElementSibling;
+        while (sibling) {
+          const next = sibling.nextElementSibling;
+          footer.appendChild(sibling);
+          sibling = next;
+        }
+        inner.appendChild(footer);
+      }
+      // Add polygon network background
+      const bg = document.createElement('div');
+      bg.className = 'title-slide-bg';
+      inner.appendChild(bg);
+      if (window._polyNet) window._polyNet.destroy();
+      window._polyNet = createPolyNetwork(bg);
+    }
   }
 
   // Copy buttons
