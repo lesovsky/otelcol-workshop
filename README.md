@@ -59,12 +59,13 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 
 ### Веб-интерфейсы
 
-| Сервис | URL | Логин |
-|--------|-----|-------|
-| Grafana | http://localhost:3000 | admin / workshop |
-| VictoriaMetrics (VMUI) | http://localhost:8428/vmui | — |
-| VictoriaLogs (UI) | http://localhost:9428/select/vmui | — |
-| Prometheus exporter | http://localhost:8889/metrics | — |
+| Сервис | URL | Описание |
+|--------|-----|----------|
+| **Workshop App** | http://localhost:8090 | Интерактивный воркшоп — теория, практика, проверки |
+| Grafana | http://localhost:3000 | Визуализация (admin / workshop) |
+| VictoriaMetrics (VMUI) | http://localhost:8428/vmui | Запросы к метрикам |
+| VictoriaLogs (UI) | http://localhost:9428/select/vmui | Поиск по логам |
+| Prometheus exporter | http://localhost:8889/metrics | Метрики для проверки |
 
 ## Структура репозитория
 
@@ -91,21 +92,32 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 │               ├── databases.json          # статистика баз данных
 │               ├── io.json                 # ввод-вывод
 │               └── bgwriter.json           # background writer + checkpointer
+├── webapp/
+│   ├── Dockerfile                          # Node.js + Express
+│   ├── server.js                           # бэкенд: статика + API-прокси к сервисам
+│   └── public/                             # фронтенд: SPA с навигацией по слайдам
 ├── guide/
-│   └── workshop-guide.md                   # пошаговая инструкция для участников
+│   └── workshop-guide.md                   # пошаговая инструкция (практика)
 ├── slides/
-│   ├── 01-intro-otel.md                    # введение в OpenTelemetry
-│   ├── 02-pgpro-otel-collector.md          # PGPRO OTEL Collector
-│   ├── 03-victoriametrics.md               # метрики → VictoriaMetrics
-│   ├── 04-victorialogs.md                  # логи → VictoriaLogs
-│   ├── 05-visualization.md                 # визуализация в Grafana
-│   └── 06-summary.md                       # итоги и что дальше
+│   ├── 01-intro-otel.md                    # введение в OpenTelemetry (кратко)
+│   ├── 01-intro-otel.detailed.md           # введение в OpenTelemetry (подробно)
+│   ├── 02-pgpro-otel-collector.md          # PGPRO OTEL Collector (кратко)
+│   ├── 02-pgpro-otel-collector.detailed.md # PGPRO OTEL Collector (подробно)
+│   ├── ...                                 # остальные разделы аналогично
+│   └── 07-troubleshooting.md               # траблшутинг (титульный слайд)
 └── pgpro-otel-collector-examples/          # примеры конфигов из deb-пакета
 ```
 
+## Прохождение воркшопа
+
+После `docker compose up -d` откройте **http://localhost:8090** — интерактивное веб-приложение с теорией, практическими шагами и встроенными проверками. Переключатель "Кратко / Подробно" позволяет выбрать уровень детализации. Тёмная и светлая темы.
+
+Альтернативно: [workshop-guide.md](guide/workshop-guide.md) — текстовая пошаговая инструкция.
+
 ## Документация
 
-- **[Workshop Guide](guide/workshop-guide.md)** — пошаговая инструкция для участников
+- **[Workshop App](http://localhost:8090)** — интерактивный воркшоп (запускается вместе с окружением)
+- **[Workshop Guide](guide/workshop-guide.md)** — текстовая пошаговая инструкция
 - **[PGPRO OTEL Collector](https://postgrespro.ru/docs/otelcol)** — документация коллектора
 - **[VictoriaMetrics](https://docs.victoriametrics.com/)** — документация VictoriaMetrics
 - **[VictoriaLogs](https://docs.victoriametrics.com/victorialogs/)** — документация VictoriaLogs
