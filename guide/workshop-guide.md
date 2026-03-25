@@ -575,11 +575,17 @@ docker exec workshop-postgres psql -U postgres -c "SELECT * FROM nonexistent_tab
 Полный pipeline мониторинга PostgreSQL настроен и работает:
 
 ```
-PostgreSQL ──▸ PGPRO OTEL Collector ──▸ VictoriaMetrics ──▸ Grafana
-  (jsonlog)    postgrespro receiver      (метрики)           (дашборды)
-  (pgbench)    hostmetrics receiver
-               filelog receiver    ────▸ VictoriaLogs   ──▸ Grafana
-               prometheus exp (:8889)    (логи)             (Explore)
+┌─────────────┐     ┌────────────────────────┐     ┌──────────────┐     ┌─────────┐
+│ PostgreSQL  │◂───▸│  PGPRO OTEL Collector  │     │              │     │         │
+│   18        │     │  postgrespro receiver  │────▸│ Victoria     │────▸│ Grafana │
+│             │     │  hostmetrics receiver  │────▸│ Metrics      │     │         │
+└─────────────┘     │  filelog receiver      │────▸│ Victoria     │────▸│         │
+       ▲            │  prometheus exp (:8889)│     │ Logs         │     │         │
+       │            └────────────────────────┘     └──────────────┘     └─────────┘
+┌──────┴──────┐
+│   pgbench   │
+│  (нагрузка) │
+└─────────────┘
 ```
 
 - **Grafana** объединяет метрики и логи в одном интерфейсе
@@ -590,6 +596,14 @@ PostgreSQL ──▸ PGPRO OTEL Collector ──▸ VictoriaMetrics ──▸ Gr
 ---
 
 ## 6. Траблшутинг
+
+Типичные проблемы и способы их решения:
+
+- **Коллектор не стартует** — контейнер перезапускается, ошибки конфигурации
+- **Метрики не появляются в VictoriaMetrics** — проблемы с exporter или подключением
+- **Логи не появляются в VictoriaLogs** — проблемы с filelog receiver или volumes
+- **Grafana не показывает данные** — проблемы с datasources или плагинами
+- **Полный перезапуск окружения** — крайняя мера при неразрешимых проблемах
 
 ### Коллектор не стартует
 

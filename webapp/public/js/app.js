@@ -170,6 +170,7 @@ const CONTENT_FLOW = [
     { type: 'guide', source: 'content/guide/workshop-guide.md', sections: [5] },
   ]},
   { id: 'troubleshooting', label: 'Траблшутинг', parts: [
+    { type: 'slides', source: 'content/slides/07-troubleshooting.md' },
     { type: 'guide', source: 'content/guide/workshop-guide.md', sections: [6] },
   ]},
   { id: 'summary', label: 'Итоги и что дальше', parts: [
