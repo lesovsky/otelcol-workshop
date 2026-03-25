@@ -504,41 +504,30 @@ curl -s 'http://localhost:9428/select/logsql/query?query=*&limit=5' 2>&1 | head 
 
 ## 5. Визуализация в Grafana
 
-Откройте Grafana: http://localhost:3000
+**Задача:** открыть Grafana, проверить datasources, изучить дашборд с метриками и настроить просмотр логов.
 
-Логин: `admin` / Пароль: `workshop`
+Откройте Grafana: `http://localhost:3000` | Логин: `admin` / Пароль: `workshop`
 
-### Шаг 5.1. Datasources
+### Datasources
 
-Datasources уже настроены через provisioning:
+**Задача:** убедиться, что оба источника данных подключены и работают.
+
+Datasources настроены автоматически через provisioning — ручная настройка не требуется.
+
+Проверьте в меню: **Connections → Data sources**. Должны быть два источника:
 
 - **VictoriaMetrics** — тип Prometheus, URL `http://victoriametrics:8428`
 - **VictoriaLogs** — тип VictoriaLogs Datasource, URL `http://victorialogs:9428`
 
-Проверьте в меню: **Connections → Data sources**. Должны быть два источника.
+### Дашборд метрик
 
-### Шаг 5.2. Дашборд метрик PostgreSQL
+**Задача:** открыть дашборд PostgreSQL Workshop и убедиться, что графики показывают реальную активность.
 
-Дашборд **"PostgreSQL Workshop"** уже импортирован через provisioning.
+Перейдите в **Dashboards → PostgreSQL Workshop**. Дашборд импортирован через provisioning и содержит панели с основными метриками. Благодаря pgbench-нагрузке, графики показывают реальную активность.
 
-Перейдите в **Dashboards → PostgreSQL Workshop**.
+### Просмотр логов в Explore
 
-На дашборде:
-
-| Панель | Метрика | Что показывает |
-|--------|---------|---------------|
-| PostgreSQL Uptime | `postgresql_health_uptime_milliseconds` | Время работы |
-| Active Connections | `postgresql_activity_connections` | Соединения по состояниям |
-| Transactions | `rate(postgresql_databases_commits_total[1m])` | Скорость транзакций |
-| Cache Hit Ratio | `postgresql_cache_hit_ratio` | Эффективность кэша |
-| WAL Generation | `rate(postgresql_wal_bytes_total[1m])` | Скорость генерации WAL |
-| Locks | `postgresql_locks_all_milliseconds` | Блокировки по типам |
-| CPU Usage | `rate(system_cpu_time_seconds_total[1m])` | Использование CPU |
-| Memory Usage | `system_memory_usage_bytes` | Использование памяти |
-
-Благодаря pgbench-нагрузке, графики показывают реальную активность.
-
-### Шаг 5.3. Просмотр логов
+**Задача:** открыть Explore, выбрать VictoriaLogs и выполнить запросы для поиска по логам.
 
 Перейдите в **Explore** (иконка компаса в боковом меню).
 
@@ -546,7 +535,7 @@ Datasources уже настроены через provisioning:
 2. В строке запроса введите `*` и нажмите **Run query**
 3. Появятся логи PostgreSQL
 
-Полезные запросы для логов:
+Полезные запросы:
 
 | Запрос | Что показывает |
 |--------|---------------|
@@ -555,17 +544,18 @@ Datasources уже настроены через provisioning:
 | `error_severity:WARNING` | Предупреждения |
 | `_msg:"checkpoint"` | Логи контрольных точек |
 | `_msg:"connection"` | Логи подключений |
-| `_msg:"lock"` | Логи блокировок |
 
-### Шаг 5.4. Создание панели для логов
+### Создание панели для логов
 
-Сначала сгенерируем ошибки в PostgreSQL, чтобы на панели гарантированно появились данные:
+**Задача:** добавить панель с логами ошибок на дашборд, чтобы метрики и логи были на одном экране.
+
+Сначала сгенерируем ошибки в PostgreSQL:
 
 ```bash
 docker exec workshop-postgres psql -U postgres -c "SELECT * FROM nonexistent_table;"
 ```
 
-Команда завершится с ошибкой — это нормально. Ошибка запишется в JSON-лог, коллектор отправит её в VictoriaLogs.
+Команда завершится с ошибкой — это нормально. Ошибка запишется в JSON-лог и попадёт в VictoriaLogs.
 
 Теперь создадим панель:
 
@@ -580,7 +570,22 @@ docker exec workshop-postgres psql -U postgres -c "SELECT * FROM nonexistent_tab
 
 > **Примечание:** Данные появятся с небольшой задержкой (до 30 секунд) — коллектор отправляет логи пачками (batch processor).
 
-Теперь на дашборде есть и метрики, и логи PostgreSQL в одном месте.
+### Итоги
+
+Полный pipeline мониторинга PostgreSQL настроен и работает:
+
+```
+PostgreSQL ──▸ PGPRO OTEL Collector ──▸ VictoriaMetrics ──▸ Grafana
+  (jsonlog)    postgrespro receiver      (метрики)           (дашборды)
+  (pgbench)    hostmetrics receiver
+               filelog receiver    ────▸ VictoriaLogs   ──▸ Grafana
+               prometheus exp (:8889)    (логи)             (Explore)
+```
+
+- **Grafana** объединяет метрики и логи в одном интерфейсе
+- Дашборд с метриками PostgreSQL и ОС показывает реальную активность
+- Explore позволяет искать по логам через LogsQL
+- Метрики и логи на одном дашборде — полная картина состояния СУБД
 
 ---
 
