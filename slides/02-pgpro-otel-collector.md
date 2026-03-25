@@ -12,10 +12,10 @@ paginate: true
 
 ## Что такое PGPRO OTEL Collector?
 
-- Специализированная сборка OpenTelemetry Collector
-- Разработана Postgres Professional
-- Включает **postgrespro receiver** — нативный сборщик метрик PostgreSQL
-- Плюс стандартные компоненты: hostmetrics, filelog, exporters
+- Специализированная сборка OpenTelemetry Collector от Postgres Professional
+- Включает **postgrespro receiver** — нативный сбор метрик PostgreSQL
+- Стандартные компоненты: hostmetrics, filelog, exporters
+- Устанавливается как единый пакет
 
 ---
 
@@ -25,10 +25,10 @@ paginate: true
 receivers:      # откуда собираем данные
 processors:     # как обрабатываем
 exporters:      # куда отправляем
-service:        # пайплайны (связываем всё вместе)
+service:        # пайплайны
 ```
 
-Откройте файл `configs/otel-collector/config-step1.yaml`
+Конфиг по умолчанию: `/etc/pgpro-otel-collector/basic.yml`
 
 ---
 
@@ -46,14 +46,9 @@ receivers:
     max_threads: 3
 ```
 
-- `collection_interval` — как часто собирать метрики
-- `${env:...}` — пароль из переменной окружения (не в конфиге!)
-
 ---
 
 ## postgrespro receiver — плагины
-
-Плагины определяют, **какие** метрики собирать:
 
 | Плагин | Что собирает |
 |--------|-------------|
@@ -64,7 +59,7 @@ receivers:
 | `databases` | Транзакции, блоки, temp-файлы |
 | `locks` | Блокировки |
 | `wal` | Статистика WAL |
-| `health` | Uptime и время запуска инстанса |
+| `health` | Uptime и время запуска |
 
 ---
 
@@ -77,8 +72,6 @@ receivers:
 | `replication` | Репликация (для primary) |
 | `tablespaces` | Размеры табличных пространств |
 | `version` | Версия PostgreSQL |
-
-Каждый плагин включается в конфиге:
 
 ```yaml
 plugins:
@@ -97,14 +90,14 @@ receivers:
   hostmetrics:
     collection_interval: 15s
     scrapers:
-      cpu:            # использование CPU
-      disk:           # дисковый I/O
-      filesystem:     # использование файловых систем
-      load:           # средняя нагрузка
-      memory:         # использование памяти
-      network:        # сетевой I/O
-      paging:         # своппинг
-      processes:      # количество процессов
+      cpu:
+      disk:
+      filesystem:
+      load:
+      memory:
+      network:
+      paging:
+      processes:
 ```
 
 ---
@@ -118,8 +111,6 @@ exporters:
     send_timestamps: true
 ```
 
-Публикует все собранные метрики на `http://localhost:8889/metrics`
-
-Используем для проверки: **собираются ли метрики?**
+Публикует метрики на `http://localhost:8889/metrics`
 
 ---

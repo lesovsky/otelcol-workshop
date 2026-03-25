@@ -450,7 +450,7 @@ async function renderStep(index) {
     const badgeType = step.type === 'theory' ? 'theory' : 'practice';
     const badgeLabel = step.type === 'theory' ? 'Теория' : 'Практика';
 
-    const isTitleSlide = step.type === 'theory' && step.slideIndex === 0;
+    const isTitleSlide = step.type === 'theory' && (step.slideIndex === 0 || /^Спасибо/.test(step.title));
     const innerClass = isTitleSlide ? 'content-inner title-slide' : 'content-inner';
 
     contentEl.innerHTML = `
@@ -830,6 +830,26 @@ function closeFlyout() {
   document.getElementById('flyout-overlay').classList.remove('open');
 }
 
+// ---- Theme Toggle ----
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'light' ? 'dark' : 'light';
+  setTheme(next);
+}
+
+function setTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.getElementById('hljs-theme').href =
+      'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('hljs-theme').href =
+      'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css';
+  }
+  localStorage.setItem('workshop-theme', theme);
+}
+
 // ---- Events ----
 function initEvents() {
   document.getElementById('btn-prev').addEventListener('click', prevStep);
@@ -880,6 +900,10 @@ function toggleSidebar() {
 async function init() {
   const contentEl = document.getElementById('content');
   contentEl.innerHTML = '<div class="loading">Загрузка контента</div>';
+
+  // Restore theme
+  const savedTheme = localStorage.getItem('workshop-theme');
+  if (savedTheme) setTheme(savedTheme);
 
   const savedMode = localStorage.getItem('workshop-mode');
   if (savedMode) contentMode = savedMode;

@@ -12,14 +12,12 @@ paginate: true
 
 ## Подготовка PostgreSQL для логирования
 
-Ключевые параметры в `postgresql.conf`:
-
 ```
-log_destination = 'jsonlog'   -- формат JSON
-logging_collector = on        -- сборщик логов
-log_checkpoints = on          -- контрольные точки
-log_lock_waits = on           -- ожидания блокировок
-log_temp_files = 0            -- все временные файлы
+log_destination = 'jsonlog'
+logging_collector = on
+log_checkpoints = on
+log_lock_waits = on
+log_temp_files = 0
 ```
 
 JSON-формат — структурированный, удобен для парсинга.
@@ -40,8 +38,6 @@ JSON-формат — структурированный, удобен для п
   "query_id": 0
 }
 ```
-
-Все поля — атрибуты, которые можно использовать для фильтрации.
 
 ---
 
@@ -75,9 +71,9 @@ receivers:
 ## filelog receiver — ключевые моменты
 
 - `include` — glob-паттерн для файлов логов
-- `start_at: end` — читаем только новые записи
+- `start_at: end` — только новые записи
 - `json_parser` — парсит JSON, извлекает атрибуты
-- `timestamp` — парсит временную метку из лога
+- `timestamp` — парсит временную метку
 - `severity` — маппинг severity PostgreSQL → OpenTelemetry
 
 ---
@@ -85,9 +81,9 @@ receivers:
 ## Что такое VictoriaLogs?
 
 - Хранилище логов от VictoriaMetrics
-- Принимает данные через **OTLP**
-- Язык запросов **LogsQL** — простой и мощный
-- Единый стек с VictoriaMetrics (один вендор)
+- Приём данных через OTLP
+- Язык запросов LogsQL
+- Встроенный UI с live-режимом
 
 В нашем стенде: `http://localhost:9428`
 
@@ -103,8 +99,7 @@ exporters:
     encoding: proto
 ```
 
-- Суффикс `/victorialogs` — именованный экземпляр exporter
-- Один и тот же тип `otlphttp`, но другой endpoint
+Именованный экземпляр — тот же тип `otlphttp`, другой endpoint.
 
 ---
 
@@ -122,10 +117,7 @@ processors:
         value: postgres:5432
 ```
 
-- `service.name` — имя сервиса (для группировки логов)
-- `service.instance.id` — идентификатор инстанса
-
-Эти атрибуты формируют **_stream** в VictoriaLogs.
+Атрибуты формируют **_stream** в VictoriaLogs.
 
 ---
 
@@ -134,17 +126,16 @@ processors:
 ```yaml
 service:
   pipelines:
-    metrics:                    # пайплайн метрик (без изменений)
+    metrics:
       receivers:  [postgrespro, hostmetrics]
-      processors: [memory_limiter/metrics]
+      processors: [memory_limiter/metrics, transform, batch/metrics]
       exporters:  [prometheus, otlphttp]
-
-    logs:                       # новый пайплайн логов
+    logs:
       receivers:  [filelog]
       processors: [resource, attributes/convert, batch/logs]
       exporters:  [otlphttp/victorialogs]
 ```
 
-Два пайплайна: метрики и логи — независимо друг от друга.
+Два независимых пайплайна: метрики и логи.
 
 ---

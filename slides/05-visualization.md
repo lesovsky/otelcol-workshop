@@ -13,7 +13,7 @@ paginate: true
 ## Grafana — единая точка наблюдения
 
 - Открытая платформа для визуализации
-- Поддержка множества datasources
+- Множество datasources (Prometheus, VictoriaLogs и др.)
 - Дашборды, алерты, Explore
 
 В нашем стенде: `http://localhost:3000`
@@ -23,20 +23,18 @@ paginate: true
 
 ## Datasources
 
-Два источника данных (настроены через provisioning):
-
 | Datasource | Тип | URL | Данные |
 |-----------|-----|-----|--------|
 | VictoriaMetrics | Prometheus | `http://victoriametrics:8428` | Метрики |
 | VictoriaLogs | VictoriaLogs | `http://victorialogs:9428` | Логи |
 
-Проверка: **Connections → Data sources**
+Настроены через provisioning. Проверка: **Connections → Data sources**
 
 ---
 
 ## Дашборд PostgreSQL Workshop
 
-Дашборд уже импортирован. Перейдите: **Dashboards → PostgreSQL Workshop**
+Перейдите: **Dashboards → PostgreSQL Workshop**
 
 | Панель | Что показывает |
 |--------|---------------|

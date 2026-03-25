@@ -11,17 +11,17 @@ paginate: true
 ## Что мы сделали на воркшопе
 
 - Развернули полный pipeline мониторинга PostgreSQL
-- Настроили сбор метрик (**postgrespro**, **hostmetrics**)
-- Настроили сбор логов (**filelog**)
-- Отправили метрики в **VictoriaMetrics** через OTLP
-- Отправили логи в **VictoriaLogs** через OTLP
-- Построили дашборды и Explore в **Grafana**
+- Настроили сбор метрик (postgrespro, hostmetrics)
+- Настроили сбор JSON-логов (filelog)
+- Отправили метрики в VictoriaMetrics через OTLP
+- Отправили логи в VictoriaLogs через OTLP
+- Построили дашборды и Explore в Grafana
 
 ---
 
 ## Что ещё умеет PGPRO OTEL Collector
 
-Мы рассмотрели лишь часть возможностей. Вот что осталось за рамками воркшопа.
+Мы рассмотрели лишь часть возможностей.
 
 ---
 
@@ -29,10 +29,8 @@ paginate: true
 
 | Receiver | Что делает |
 |----------|-----------|
-| `journald` | Чтение логов из systemd journal |
-| `sqlquery` | Кастомные SQL-запросы для сбора метрик и логов |
-
-`sqlquery` позволяет собирать **любые** данные из PostgreSQL — достаточно написать SQL-запрос.
+| `journald` | Логи из systemd journal |
+| `sqlquery` | Кастомные SQL-запросы |
 
 ---
 
@@ -40,11 +38,9 @@ paginate: true
 
 | Processor | Что делает |
 |-----------|-----------|
-| `filter` | Фильтрация данных по условиям (drop/include) |
-| `transform` | Трансформация телеметрии (OTTL-выражения) |
-| `metricstransform` | Переименование, агрегация, масштабирование метрик |
-
-Полезно для продакшена: убрать лишние метрики, переименовать, агрегировать.
+| `filter` | Фильтрация данных (drop/include) |
+| `transform` | Трансформация (OTTL-выражения) |
+| `metricstransform` | Переименование, агрегация метрик |
 
 ---
 
@@ -52,10 +48,8 @@ paginate: true
 
 | Exporter | Куда отправляет |
 |----------|----------------|
-| `kafka` | Apache Kafka (для сложных pipeline) |
-| `zabbix` | Zabbix (интеграция с существующим мониторингом) |
-
-Можно комбинировать: одни данные в VictoriaMetrics, другие — в Kafka или Zabbix.
+| `kafka` | Apache Kafka |
+| `zabbix` | Zabbix |
 
 ---
 
@@ -63,12 +57,12 @@ paginate: true
 
 | Плагин | Что собирает |
 |--------|-------------|
-| `statements` | pg_stat_statements — статистика запросов |
+| `statements` | pg_stat_statements |
 | `indexes` | Использование индексов |
-| `tables` | Статистика таблиц (seq scan, idx scan, live/dead tuples) |
+| `tables` | Статистика таблиц |
 | `bloat` | Раздувание таблиц и индексов |
-| `buffercache` | pg_buffercache — содержимое shared buffers |
-| `functions` | Статистика пользовательских функций |
+| `buffercache` | Содержимое shared buffers |
+| `functions` | Статистика функций |
 
 ---
 
@@ -77,21 +71,19 @@ paginate: true
 | Плагин | Что собирает |
 |--------|-------------|
 | `replication_slots` | Слоты репликации |
-| `subscriptions` | Логическая репликация (подписки) |
-| `prepared_transactions` | Подготовленные (двухфазные) транзакции |
+| `subscriptions` | Логическая репликация |
+| `prepared_transactions` | Двухфазные транзакции |
 | `sequences` | Использование последовательностей |
 | `recovery` | Статистика восстановления |
-| `biha` | BiHA — встроенная высокая доступность |
+| `biha` | Встроенная высокая доступность |
 
 ---
 
 ## Безопасность и ACL
 
-- **TLS** — шифрование соединений с хранилищами (ca_file, cert_file, key_file)
+- **TLS** — шифрование соединений
 - **Basic Auth** — аутентификация через htpasswd
-- **ACL-списки** — фильтрация объектов мониторинга:
-  - По базам данных, схемам, таблицам, индексам, функциям
-  - Поддержка регулярных выражений
+- **ACL-списки** — фильтрация объектов мониторинга
 
 ```yaml
 receivers:
@@ -111,22 +103,18 @@ receivers:
 
 ## Интеграции
 
-- **PPEM** (Postgres Pro Enterprise Manager) — централизованное управление
-- **Zabbix** — экспорт метрик в существующую инфраструктуру мониторинга
+- **PPEM** — централизованное управление Postgres Pro
+- **Zabbix** — интеграция с существующим мониторингом
 - **Kafka** — потоковая обработка телеметрии
 
 ---
 
 ## Полезные ссылки
 
-- Документация PGPRO OTEL Collector:
-  `postgrespro.ru/docs/otelcol`
-- VictoriaMetrics:
-  `docs.victoriametrics.com`
-- VictoriaLogs:
-  `docs.victoriametrics.com/victorialogs`
-- OpenTelemetry:
-  `opentelemetry.io`
+- [postgrespro.ru/docs/otelcol](https://postgrespro.ru/docs/otelcol)
+- [docs.victoriametrics.com](https://docs.victoriametrics.com)
+- [docs.victoriametrics.com/victorialogs](https://docs.victoriametrics.com/victorialogs)
+- [opentelemetry.io](https://opentelemetry.io)
 
 ---
 

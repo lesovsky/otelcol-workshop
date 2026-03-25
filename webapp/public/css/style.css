@@ -27,6 +27,60 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+/* ---- Light Theme ---- */
+[data-theme="light"] {
+  --bg-deep: #f8fafc;
+  --bg-base: #ffffff;
+  --bg-surface: #f1f5f9;
+  --bg-elevated: #e2e8f0;
+  --bg-hover: #e2e8f0;
+  --border: #cbd5e1;
+  --border-light: #94a3b8;
+  --primary: #0284c7;
+  --primary-dim: #e0f2fe;
+  --accent: #059669;
+  --accent-dim: #d1fae5;
+  --warning: #d97706;
+  --error: #dc2626;
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --code-bg: #f1f5f9;
+}
+
+/* ---- Theme Toggle Button ---- */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--border-light);
+  background: var(--bg-hover);
+}
+
+.theme-icon-light { display: none; }
+[data-theme="light"] .theme-icon-dark { display: none; }
+[data-theme="light"] .theme-icon-light { display: block; }
+
+/* Light theme: welcome gradient text needs different colors */
+[data-theme="light"] .welcome h1 {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* Reset */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

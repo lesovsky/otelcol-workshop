@@ -13,17 +13,16 @@ paginate: true
 ## Что такое VictoriaMetrics?
 
 - Высокопроизводительная TSDB (time series database)
-- Совместима с Prometheus (PromQL, remote write)
-- Поддерживает приём данных через **OTLP** (OpenTelemetry Protocol)
+- Совместима с Prometheus (PromQL, remote write, MetricsQL)
+- Нативная поддержка OTLP
 - Single-node — одного бинарника достаточно
+- Встроенный UI (VMUI)
 
 В нашем стенде: `http://localhost:8428`
 
 ---
 
 ## Как коллектор отправляет метрики?
-
-Добавляем **otlphttp exporter** в конфиг:
 
 ```yaml
 exporters:
@@ -33,15 +32,13 @@ exporters:
     encoding: proto
 ```
 
-- `endpoint` — URL VictoriaMetrics с суффиксом `/opentelemetry`
-- `compression: gzip` — сжатие для экономии трафика
-- `encoding: proto` — бинарный формат (эффективнее JSON)
+Прямое соединение по OTLP без промежуточных агентов.
 
 ---
 
 ## Transform processor
 
-Метрики с пустой единицей измерения получают суффикс `_unixtime` в VictoriaMetrics. Исправляем через transform processor:
+Метрики с пустым unit получают суффикс `_unixtime`. Исправляем:
 
 ```yaml
 processors:
@@ -65,20 +62,16 @@ service:
         - hostmetrics
       processors:
         - memory_limiter/metrics
-        - transform           # исправление unit для VM
+        - transform
         - batch/metrics
       exporters:
-        - prometheus        # для проверки (остаётся)
-        - otlphttp          # → VictoriaMetrics (новый)
+        - prometheus
+        - otlphttp
 ```
-
-Добавлены `transform`, `batch/metrics` и `otlphttp`.
 
 ---
 
 ## Имена метрик: Prometheus vs OTLP
-
-При передаче через OTLP VictoriaMetrics добавляет суффиксы единиц измерения:
 
 | Prometheus exporter | VictoriaMetrics (OTLP) |
 |--------------------|----------------------|

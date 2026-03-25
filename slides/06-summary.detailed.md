@@ -120,24 +120,40 @@ receivers:
 
 ## Интеграции
 
-- **PPEM** (Postgres Pro Enterprise Manager) — централизованное управление кластерами Postgres Pro. PGPRO OTEL Collector интегрирован с PPEM для автоматического обнаружения и мониторинга инстансов
-- **Zabbix** — экспорт метрик в существующую инфраструктуру мониторинга через zabbix exporter. Позволяет использовать OTel Collector как замену Zabbix Agent для PostgreSQL
-- **Kafka** — потоковая обработка телеметрии. Метрики и логи отправляются в Kafka, откуда могут быть прочитаны другими потребителями для обогащения, алертинга или долгосрочного хранения
+- **PPEM** (Postgres Pro Enterprise Manager) — централизованное управление кластерами Postgres Pro. PGPRO OTEL Collector интегрирован с PPEM для автоматического обнаружения и мониторинга инстансов — [postgrespro.ru/products/postgrespro-enterprise-manager](https://postgrespro.ru/products/postgrespro-enterprise-manager)
+- **Zabbix** — экспорт метрик в существующую инфраструктуру мониторинга через zabbix exporter. Позволяет использовать OTel Collector как замену Zabbix Agent для PostgreSQL — [zabbix.com](https://www.zabbix.com)
+- **Kafka** — потоковая обработка телеметрии. Метрики и логи отправляются в Kafka, откуда могут быть прочитаны другими потребителями для обогащения, алертинга или долгосрочного хранения — [kafka.apache.org](https://kafka.apache.org)
 
 ---
 
 ## Полезные ссылки
 
-- Документация PGPRO OTEL Collector:
-  [postgrespro.ru/docs/otelcol](https://postgrespro.ru/docs/otelcol)
-- VictoriaMetrics:
-  [docs.victoriametrics.com](https://docs.victoriametrics.com)
-- VictoriaLogs:
-  [docs.victoriametrics.com/victorialogs](https://docs.victoriametrics.com/victorialogs)
-- OpenTelemetry:
-  [opentelemetry.io](https://opentelemetry.io)
-- OpenTelemetry Collector Contrib (receivers, processors, exporters):
-  [github.com/open-telemetry/opentelemetry-collector-contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib)
+**PostgreSQL:**
+
+- [postgresql.org/docs/current/monitoring-stats.html](https://www.postgresql.org/docs/current/monitoring-stats.html) — системные представления статистики PostgreSQL (pg_stat_activity, pg_stat_bgwriter и др.)
+- [postgresql.org/docs/current/runtime-config-logging.html](https://www.postgresql.org/docs/current/runtime-config-logging.html) — настройка логирования PostgreSQL (jsonlog, csvlog, параметры)
+- [postgresql.org/docs/current/pgstatstatements.html](https://www.postgresql.org/docs/current/pgstatstatements.html) — pg_stat_statements: статистика запросов
+
+**PGPRO OTEL Collector:**
+
+- [postgrespro.ru/docs/otelcol](https://postgrespro.ru/docs/otelcol) — документация PGPRO OTEL Collector
+- [postgrespro.ru/docs/otelcol/current/otelcol-receivers.html](https://postgrespro.ru/docs/otelcol/current/otelcol-receivers.html) — receivers и плагины
+- [postgrespro.ru/docs/otelcol/current/otelcol-metrics.html](https://postgrespro.ru/docs/otelcol/current/otelcol-metrics.html) — каталог метрик
+- [postgrespro.ru/docs/otelcol/current/otelcol-installation.html](https://postgrespro.ru/docs/otelcol/current/otelcol-installation.html) — установка и быстрый старт
+
+**Хранилища и визуализация:**
+
+- [docs.victoriametrics.com](https://docs.victoriametrics.com) — VictoriaMetrics: хранилище метрик
+- [docs.victoriametrics.com/victorialogs](https://docs.victoriametrics.com/victorialogs) — VictoriaLogs: хранилище логов
+- [docs.victoriametrics.com/metricsql](https://docs.victoriametrics.com/metricsql) — MetricsQL: расширенный язык запросов (надмножество PromQL)
+- [prometheus.io/docs/prometheus/latest/querying/basics](https://prometheus.io/docs/prometheus/latest/querying/basics/) — PromQL: основы языка запросов
+- [grafana.com/docs/grafana/latest](https://grafana.com/docs/grafana/latest/) — Grafana: документация
+
+**OpenTelemetry:**
+
+- [opentelemetry.io](https://opentelemetry.io) — проект OpenTelemetry
+- [opentelemetry.io/docs/collector](https://opentelemetry.io/docs/collector/) — документация OpenTelemetry Collector
+- [github.com/open-telemetry/opentelemetry-collector-contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib) — receivers, processors, exporters (contrib)
 
 ---
 
