@@ -106,6 +106,7 @@ services:
     volumes:
       - ./slides:/data/content/slides:ro
       - ./guide:/data/content/guide:ro
+      - ./configs:/data/content/configs:ro
     restart: unless-stopped
 
 volumes:

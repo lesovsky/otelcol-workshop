@@ -55,7 +55,12 @@
         </div>
       </div>
 
-      <div id="content" class="content"></div>
+      <div class="content-wrapper">
+        <!-- Context actions panel (left gutter) -->
+        <div class="context-panel" id="context-panel"></div>
+
+        <div id="content" class="content"></div>
+      </div>
 
       <!-- Bottom navigation -->
       <div class="bottom-nav">
@@ -75,6 +80,19 @@
         <div class="bottom-progress-bar"><div class="bottom-progress-fill" id="progress-fill"></div></div>
       </div>
     </main>
+  </div>
+
+  <!-- Flyout panel for file viewing -->
+  <div class="flyout-overlay" id="flyout-overlay" onclick="closeFlyout()">
+    <div class="flyout-panel" onclick="event.stopPropagation()">
+      <div class="flyout-header">
+        <span class="flyout-title" id="flyout-title"></span>
+        <button class="flyout-close" onclick="closeFlyout()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="flyout-body" id="flyout-body"></div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>

@@ -380,6 +380,7 @@ async function renderStep(index) {
   const contentEl = document.getElementById('content');
 
   updateDetailToggle(step);
+  updateContextPanel(step);
 
   if (step.type === 'welcome') {
     contentEl.innerHTML = `
@@ -462,6 +463,11 @@ async function renderStep(index) {
     btn.onclick = () => copyCode(block, btn);
     pre.style.position = 'relative';
     pre.appendChild(btn);
+  });
+
+  // Bind view-file buttons
+  contentEl.querySelectorAll('.view-file-btn').forEach(btn => {
+    btn.addEventListener('click', () => openFlyout(btn.dataset.file));
   });
 
   contentEl.scrollTop = 0;
@@ -588,6 +594,93 @@ async function checkServices() {
   }
 }
 
+// ---- Context Panel (left gutter actions) ----
+const CONTEXT_ACTIONS = {
+  'collector': [
+    { icon: 'file', label: 'config-step1.yaml', file: 'content/configs/otel-collector/config-step1.yaml' }
+  ],
+  'collector-practice': [
+    { icon: 'file', label: 'config-step1.yaml', file: 'content/configs/otel-collector/config-step1.yaml' }
+  ],
+  'victoriametrics': [
+    { icon: 'file', label: 'config-step2.yaml', file: 'content/configs/otel-collector/config-step2.yaml' }
+  ],
+  'vm-practice': [
+    { icon: 'file', label: 'config-step2.yaml', file: 'content/configs/otel-collector/config-step2.yaml' }
+  ],
+  'victorialogs': [
+    { icon: 'file', label: 'config-step3.yaml', file: 'content/configs/otel-collector/config-step3.yaml' }
+  ],
+  'vl-practice': [
+    { icon: 'file', label: 'config-step3.yaml', file: 'content/configs/otel-collector/config-step3.yaml' }
+  ],
+  'visualization': [
+    { icon: 'file', label: 'config-step3.yaml', file: 'content/configs/otel-collector/config-step3.yaml' }
+  ],
+  'grafana-practice': [
+    { icon: 'file', label: 'config-step3.yaml', file: 'content/configs/otel-collector/config-step3.yaml' }
+  ],
+};
+
+const CTX_ICONS = {
+  file: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+};
+
+function updateContextPanel(step) {
+  const panel = document.getElementById('context-panel');
+  const actions = CONTEXT_ACTIONS[step.sectionId] || [];
+
+  if (actions.length === 0) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  panel.innerHTML = actions.map(a => `
+    <button class="ctx-btn" onclick="openFlyout('${a.file}')">
+      ${CTX_ICONS[a.icon] || CTX_ICONS.file}
+      <span class="ctx-tooltip">${a.label}</span>
+    </button>
+  `).join('');
+}
+
+// ---- Flyout File Viewer ----
+async function openFlyout(filePath) {
+  const overlay = document.getElementById('flyout-overlay');
+  const title = document.getElementById('flyout-title');
+  const body = document.getElementById('flyout-body');
+
+  // Extract filename for title
+  const filename = filePath.split('/').pop();
+  title.textContent = filename;
+
+  // Show loading
+  body.innerHTML = '<div class="loading">Загрузка</div>';
+  overlay.classList.add('open');
+
+  try {
+    const text = await fetchText(filePath);
+    // Detect language from extension
+    const ext = filename.split('.').pop();
+    const langMap = { yaml: 'yaml', yml: 'yaml', json: 'json', conf: 'ini', sh: 'bash' };
+    const lang = langMap[ext] || '';
+
+    let highlighted;
+    if (lang && hljs.getLanguage(lang)) {
+      highlighted = hljs.highlight(text, { language: lang }).value;
+    } else {
+      highlighted = hljs.highlightAuto(text).value;
+    }
+
+    body.innerHTML = `<pre><code class="language-${lang}">${highlighted}</code></pre>`;
+  } catch (err) {
+    body.innerHTML = `<div style="padding:1rem;color:var(--error);">Не удалось загрузить файл: ${err.message}</div>`;
+  }
+}
+
+function closeFlyout() {
+  document.getElementById('flyout-overlay').classList.remove('open');
+}
+
 // ---- Events ----
 function initEvents() {
   document.getElementById('btn-prev').addEventListener('click', prevStep);
@@ -595,6 +688,10 @@ function initEvents() {
 
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    // Close flyout on Escape
+    if (e.key === 'Escape') { closeFlyout(); return; }
+    // Don't navigate when flyout is open
+    if (document.getElementById('flyout-overlay').classList.contains('open')) return;
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); nextStep(); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prevStep(); }
     else if (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') { e.preventDefault(); toggleSidebar(); }

@@ -124,55 +124,13 @@ exporters:
 
 ---
 
-## Пайплайн — config-step1
+## Итоги
 
-```yaml
-service:
-  pipelines:
-    metrics:
-      receivers:
-        - postgrespro       # метрики PostgreSQL
-        - hostmetrics       # метрики ОС
-      processors:
-        - memory_limiter/metrics
-      exporters:
-        - prometheus        # публикация для проверки
-```
-
-`receivers` → `processors` → `exporters`
-
----
-
-## Практика: проверяем сбор метрик
-
-Перейдите к разделу 2.5 в workshop-guide.
-
-**Логи коллектора:**
-```bash
-docker logs workshop-otel-collector 2>&1 | grep "Everything is ready"
-```
-
-**Метрики PostgreSQL:**
-```bash
-curl -s http://localhost:8889/metrics | grep "^postgresql_" | head -10
-```
-
-**Подсчёт метрик:**
-```bash
-curl -s http://localhost:8889/metrics | grep -c "^postgresql_"
-```
-
-Ожидаем ~300+ метрик.
-
----
-
-## Что мы получили
-
-- **postgrespro receiver** собирает метрики PostgreSQL (activity, wal, bgwriter, locks, cache...)
-- **hostmetrics receiver** собирает метрики ОС (cpu, memory, disk...)
+- **postgrespro receiver** собирает метрики PostgreSQL по плагинам
+- **hostmetrics receiver** собирает метрики ОС
 - **prometheus exporter** публикует метрики для проверки
-- Метрики доступны на `http://localhost:8889/metrics`
+- Конфигурация: receivers → processors → exporters → service
 
-Следующий шаг — отправка метрик в хранилище.
+Переходим к практике.
 
 ---
