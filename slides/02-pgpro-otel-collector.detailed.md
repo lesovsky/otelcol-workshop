@@ -151,17 +151,3 @@ exporters:
 Документация: [prometheus exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusexporter)
 
 ---
-
-## Итоги: PGPRO OTEL Collector
-
-В этом разделе мы разобрали, как устроен PGPRO OTEL Collector и из каких компонентов состоит конфигурация сбора метрик.
-
-- **PGPRO OTEL Collector** — специализированная сборка с нативным PostgreSQL receiver от Postgres Professional
-- **postgrespro receiver** — подключается к PostgreSQL по TCP и через системные представления собирает метрики по плагинам (activity, wal, locks, cache и др.)
-- **hostmetrics receiver** — собирает метрики ОС (CPU, память, диск, сеть) без внешних зависимостей
-- **prometheus exporter** — публикует метрики для проверки на HTTP-эндпоинте
-- **Конфигурация** — единый YAML-файл с четырьмя секциями: receivers, processors, exporters, service
-
-Переходим к практике — запустим коллектор и убедимся, что метрики собираются.
-
----

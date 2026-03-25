@@ -76,39 +76,6 @@ service:
 
 ---
 
-## Практика: переключаем конфиг
-
-Перейдите к разделу 3 в workshop-guide.
-
-Отредактируйте `docker-compose.yml`:
-
-```yaml
-volumes:
-  - ./configs/otel-collector/config-step2.yaml:/.../config.yaml:ro
-```
-
-Пересоздайте контейнер:
-
-```bash
-docker compose up -d otel-collector
-```
-
----
-
-## Проверка: VMUI
-
-Откройте в браузере: `http://localhost:8428/vmui`
-
-Введите запрос:
-
-```
-postgresql_health_uptime_milliseconds
-```
-
-Должен появиться график с uptime PostgreSQL.
-
----
-
 ## Имена метрик: Prometheus vs OTLP
 
 При передаче через OTLP VictoriaMetrics добавляет суффиксы единиц измерения:
@@ -119,28 +86,5 @@ postgresql_health_uptime_milliseconds
 | `postgresql_wal_bytes` | `postgresql_wal_bytes_total` |
 | `system_cpu_time` | `system_cpu_time_seconds_total` |
 | `system_memory_usage` | `system_memory_usage_bytes` |
-
----
-
-## Полезные запросы в VMUI
-
-| Запрос | Что показывает |
-|--------|---------------|
-| `postgresql_health_uptime_milliseconds` | Uptime |
-| `postgresql_activity_connections` | Соединения |
-| `rate(postgresql_databases_commits_total[1m])` | Скорость коммитов |
-| `postgresql_cache_hit_ratio` | Cache hit ratio |
-| `system_memory_usage_bytes` | Использование памяти |
-
----
-
-## Что мы получили
-
-- Метрики PostgreSQL и ОС хранятся в VictoriaMetrics
-- Доступны через VMUI и API
-- Можно строить запросы на языке PromQL/MetricsQL
-- Prometheus exporter остаётся для быстрой проверки
-
-Следующий шаг — логи.
 
 ---

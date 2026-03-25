@@ -107,6 +107,63 @@ app.get('/api/logs/query', async (req, res) => {
   }
 });
 
+// --- API: Run check — proxy for interactive code block execution ---
+app.get('/api/run/collector-metrics', async (req, res) => {
+  const filter = req.query.filter || '';
+  const limit = parseInt(req.query.limit) || 0;
+  try {
+    const resp = await httpGet('otel-collector', 8889, '/metrics');
+    let lines = resp.data.split('\n').filter(l => !l.startsWith('#') && l.trim());
+    if (filter) {
+      lines = lines.filter(l => l.startsWith(filter));
+    }
+    const total = lines.length;
+    if (limit > 0) {
+      lines = lines.slice(0, limit);
+    }
+    res.json({ ok: true, total, showing: lines.length, output: lines.join('\n') });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
+app.get('/api/run/collector-metrics-count', async (req, res) => {
+  const filter = req.query.filter || '';
+  try {
+    const resp = await httpGet('otel-collector', 8889, '/metrics');
+    const lines = resp.data.split('\n').filter(l => !l.startsWith('#') && l.trim());
+    const count = filter ? lines.filter(l => l.startsWith(filter)).length : lines.length;
+    res.json({ ok: true, count, output: `${count}` });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
+app.get('/api/run/vm-query', async (req, res) => {
+  const query = req.query.q;
+  if (!query) return res.status(400).json({ error: 'Missing query parameter q' });
+  try {
+    const resp = await httpGet('victoriametrics', 8428, `/api/v1/query?query=${encodeURIComponent(query)}`);
+    const data = JSON.parse(resp.data);
+    const output = JSON.stringify(data, null, 2);
+    res.json({ ok: true, output });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
+app.get('/api/run/vl-query', async (req, res) => {
+  const query = req.query.q || '*';
+  const limit = req.query.limit || '5';
+  try {
+    const resp = await httpGet('victorialogs', 9428,
+      `/select/logsql/query?query=${encodeURIComponent(query)}&limit=${limit}`);
+    res.json({ ok: true, output: resp.data });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
 // --- API: List available detailed content files ---
 app.get('/api/content/detailed', async (req, res) => {
   const slidesDir = '/data/content/slides';

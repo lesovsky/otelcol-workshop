@@ -192,13 +192,6 @@ body {
   background: var(--bg-deep);
 }
 
-.content-wrapper {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  position: relative;
-}
-
 .content {
   flex: 1;
   overflow-y: auto;
@@ -211,71 +204,7 @@ body {
   .content { padding: 2rem 5%; }
 }
 
-/* ---- Context Panel (left gutter) ---- */
-.context-panel {
-  position: absolute;
-  left: 1.5rem;
-  top: 8.5rem;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.context-panel:empty {
-  display: none;
-}
-
-.ctx-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition);
-  position: relative;
-}
-
-.ctx-btn:hover {
-  background: var(--bg-hover);
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-.ctx-btn:hover .ctx-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(0);
-}
-
-.ctx-tooltip {
-  position: absolute;
-  left: calc(100% + 8px);
-  top: 50%;
-  transform: translateX(-4px) translateY(-50%);
-  white-space: nowrap;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.3rem 0.6rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
-  pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-@media (max-width: 1200px) {
-  .context-panel { display: none; }
-}
+/* context-panel removed — actions are now inline in code blocks */
 
 .content-inner {
   max-width: 100%;
@@ -448,10 +377,22 @@ body {
   scrollbar-color: var(--border) transparent;
 }
 
-.copy-btn {
+.code-btn-group {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
+  display: flex;
+  gap: 0.3rem;
+  opacity: 0;
+  transition: opacity var(--transition);
+  z-index: 2;
+}
+
+.content-inner pre:hover .code-btn-group {
+  opacity: 1;
+}
+
+.code-action-btn {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -464,23 +405,139 @@ body {
   align-items: center;
   gap: 0.3rem;
   transition: all var(--transition);
-  opacity: 0;
-  z-index: 2;
 }
 
-.content-inner pre:hover .copy-btn {
-  opacity: 1;
-}
-
-.copy-btn:hover {
+.code-action-btn:hover {
   background: var(--bg-hover);
   color: var(--text);
   border-color: var(--border-light);
 }
 
-.copy-btn.copied {
+.code-action-btn.copied {
   color: var(--accent);
   border-color: var(--accent);
+}
+
+.view-btn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.run-btn {
+  color: var(--accent);
+}
+
+.run-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.run-meta {
+  padding: 0.5rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.run-error {
+  color: var(--error);
+}
+
+/* ---- Clickable localhost links ---- */
+a.localhost-link {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--primary);
+  text-decoration: none;
+  background: var(--code-bg);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  border-bottom: 1px solid transparent;
+  transition: all var(--transition);
+}
+
+a.localhost-link:hover {
+  border-bottom-color: var(--primary);
+  background: var(--primary-dim);
+}
+
+/* ---- Bottom Drawer (for command output) ---- */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s ease;
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.drawer-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  min-height: 200px;
+  max-height: 50vh;
+  background: var(--bg-base);
+  border-top: 1px solid var(--border);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.drawer-overlay.open .drawer-panel {
+  transform: translateY(0);
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.drawer-title {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.drawer-body {
+  flex: 1;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.drawer-body pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.drawer-body pre code {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  background: var(--code-bg);
+  display: block;
+  white-space: pre;
+  overflow-x: auto;
 }
 
 /* ---- Blockquotes (notes/warnings) ---- */
@@ -503,9 +560,8 @@ body {
   color: var(--warning);
 }
 
-/* ---- ASCII Art / Diagrams ---- */
-.content-inner pre code.language-undefined,
-.content-inner pre code:not([class*="language-"]) {
+/* ---- ASCII Art / Diagrams (applied via JS for blocks with box-drawing chars) ---- */
+.content-inner pre code.ascii-diagram {
   color: var(--text-muted);
   font-size: 0.75rem;
   line-height: 1.5;

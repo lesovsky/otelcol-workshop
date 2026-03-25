@@ -147,18 +147,34 @@ function createPolyNetwork(container, opts = {}) {
 
 // Content flow definition
 const CONTENT_FLOW = [
-  { id: 'intro', type: 'slides', source: 'content/slides/01-intro-otel.md', label: 'Введение в OpenTelemetry' },
-  { id: 'setup', type: 'guide', source: 'content/guide/workshop-guide.md', sections: [0, 1], label: 'Подготовка окружения' },
-  { id: 'collector', type: 'slides', source: 'content/slides/02-pgpro-otel-collector.md', label: 'PGPRO OTEL Collector' },
-  { id: 'collector-practice', type: 'guide', source: 'content/guide/workshop-guide.md', sections: [2], label: 'Настройка коллектора' },
-  { id: 'victoriametrics', type: 'slides', source: 'content/slides/03-victoriametrics.md', label: 'Метрики → VictoriaMetrics' },
-  { id: 'vm-practice', type: 'guide', source: 'content/guide/workshop-guide.md', sections: [3], label: 'Интеграция с VictoriaMetrics' },
-  { id: 'victorialogs', type: 'slides', source: 'content/slides/04-victorialogs.md', label: 'Логи → VictoriaLogs' },
-  { id: 'vl-practice', type: 'guide', source: 'content/guide/workshop-guide.md', sections: [4], label: 'Интеграция с VictoriaLogs' },
-  { id: 'visualization', type: 'slides', source: 'content/slides/05-visualization.md', label: 'Визуализация в Grafana' },
-  { id: 'grafana-practice', type: 'guide', source: 'content/guide/workshop-guide.md', sections: [5], label: 'Дашборды и логи в Grafana' },
-  { id: 'troubleshooting', type: 'guide', source: 'content/guide/workshop-guide.md', sections: [6], label: 'Траблшутинг' },
-  { id: 'summary', type: 'slides', source: 'content/slides/06-summary.md', label: 'Итоги и что дальше' },
+  { id: 'intro', label: 'Введение в OpenTelemetry', parts: [
+    { type: 'slides', source: 'content/slides/01-intro-otel.md' },
+  ]},
+  { id: 'setup', label: 'Подготовка окружения', parts: [
+    { type: 'guide', source: 'content/guide/workshop-guide.md', sections: [0, 1] },
+  ]},
+  { id: 'collector', label: 'PGPRO OTEL Collector', parts: [
+    { type: 'slides', source: 'content/slides/02-pgpro-otel-collector.md' },
+    { type: 'guide', source: 'content/guide/workshop-guide.md', sections: [2] },
+  ]},
+  { id: 'victoriametrics', label: 'Метрики → VictoriaMetrics', parts: [
+    { type: 'slides', source: 'content/slides/03-victoriametrics.md' },
+    { type: 'guide', source: 'content/guide/workshop-guide.md', sections: [3] },
+  ]},
+  { id: 'victorialogs', label: 'Логи → VictoriaLogs', parts: [
+    { type: 'slides', source: 'content/slides/04-victorialogs.md' },
+    { type: 'guide', source: 'content/guide/workshop-guide.md', sections: [4] },
+  ]},
+  { id: 'visualization', label: 'Визуализация в Grafana', parts: [
+    { type: 'slides', source: 'content/slides/05-visualization.md' },
+    { type: 'guide', source: 'content/guide/workshop-guide.md', sections: [5] },
+  ]},
+  { id: 'troubleshooting', label: 'Траблшутинг', parts: [
+    { type: 'guide', source: 'content/guide/workshop-guide.md', sections: [6] },
+  ]},
+  { id: 'summary', label: 'Итоги и что дальше', parts: [
+    { type: 'slides', source: 'content/slides/06-summary.md' },
+  ]},
 ];
 
 const SERVICE_NAMES = {
@@ -255,14 +271,21 @@ function splitGuideSubsections(content) {
 function extractTitle(md) {
   const match = md.match(/^#{1,3}\s+(.+)$/m);
   if (!match) return '';
-  // Strip leading "N. " from guide section headings (e.g. "0. Подготовка" -> "Подготовка")
   return match[1].replace(/\*\*/g, '').replace(/^\d+\.\s+/, '');
 }
 
+// Strip section numbers from guide headings before rendering
+function stripSectionNumbers(md) {
+  return md.replace(/^(#{1,3})\s+\d+\.\s+/gm, '$1 ');
+}
+
 async function loadAllContent() {
+  // Collect all unique sources
   const sources = {};
-  for (const item of CONTENT_FLOW) {
-    if (!sources[item.source]) sources[item.source] = fetchText(item.source);
+  for (const section of CONTENT_FLOW) {
+    for (const part of section.parts) {
+      if (!sources[part.source]) sources[part.source] = fetchText(part.source);
+    }
   }
 
   const loaded = {};
@@ -287,38 +310,44 @@ async function loadAllContent() {
     sectionId: 'welcome', sectionLabel: 'Начало', sourceFile: null
   });
 
-  for (const item of CONTENT_FLOW) {
-    if (item.type === 'slides') {
-      const slides = splitSlides(loaded[item.source]);
-      const sourceBase = item.source.replace('content/slides/', '').replace('.md', '');
+  for (const section of CONTENT_FLOW) {
+    for (const part of section.parts) {
+      if (part.type === 'slides') {
+        const slides = splitSlides(loaded[part.source]);
+        const sourceBase = part.source.replace('content/slides/', '').replace('.md', '');
 
-      slides.forEach((slideContent, i) => {
-        steps.push({
-          type: 'theory',
-          title: extractTitle(slideContent) || item.label,
-          html: marked.parse(slideContent),
-          sectionId: item.id,
-          sectionLabel: item.label,
-          sourceFile: sourceBase,
-          slideIndex: i,
-          shortContent: slideContent
-        });
-      });
-    } else if (item.type === 'guide') {
-      for (const secNum of item.sections) {
-        const section = guideSections.find(s => s.num === secNum);
-        if (section) {
-          const subSections = splitGuideSubsections(section.content);
-          subSections.forEach(sub => {
-            steps.push({
-              type: 'practice',
-              title: extractTitle(sub) || item.label,
-              html: marked.parse(sub),
-              sectionId: item.id,
-              sectionLabel: item.label,
-              sourceFile: null
-            });
+        slides.forEach((slideContent, i) => {
+          steps.push({
+            type: 'theory',
+            title: extractTitle(slideContent) || section.label,
+            html: marked.parse(slideContent),
+            sectionId: section.id,
+            sectionLabel: section.label,
+            sourceFile: sourceBase,
+            slideIndex: i,
+            shortContent: slideContent
           });
+        });
+      } else if (part.type === 'guide') {
+        for (const secNum of part.sections) {
+          const guideSection = guideSections.find(s => s.num === secNum);
+          if (guideSection) {
+            const subSections = splitGuideSubsections(guideSection.content);
+            subSections.forEach(sub => {
+              const cleaned = stripSectionNumbers(sub);
+              const title = extractTitle(cleaned) || section.label;
+              // "Итоги" sections are theory, not practice
+              const stepType = /^Итоги/.test(title) ? 'theory' : 'practice';
+              steps.push({
+                type: stepType,
+                title: title,
+                html: marked.parse(cleaned),
+                sectionId: section.id,
+                sectionLabel: section.label,
+                sourceFile: null
+              });
+            });
+          }
         }
       }
     }
@@ -380,7 +409,6 @@ async function renderStep(index) {
   const contentEl = document.getElementById('content');
 
   updateDetailToggle(step);
-  updateContextPanel(step);
 
   if (step.type === 'welcome') {
     contentEl.innerHTML = `
@@ -454,20 +482,64 @@ async function renderStep(index) {
     }
   }
 
-  // Copy buttons
+  // Copy + View buttons on code blocks
+  const configFile = SECTION_CONFIG_FILES[step.sectionId] || null;
+
   contentEl.querySelectorAll('pre code').forEach(block => {
     const pre = block.parentElement;
-    const btn = document.createElement('button');
-    btn.className = 'copy-btn';
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`;
-    btn.onclick = () => copyCode(block, btn);
     pre.style.position = 'relative';
-    pre.appendChild(btn);
+
+    // Detect ASCII diagrams (box-drawing characters)
+    if (/[┌┐└┘│─├┤▸◂▸═║╔╗╚╝]/.test(block.textContent)) {
+      block.classList.add('ascii-diagram');
+    }
+
+    // Button container (top-right)
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'code-btn-group';
+
+    // Run button (for curl commands that can be proxied)
+    const runnable = findRunnableCommand(block.textContent);
+    if (runnable) {
+      const runBtn = document.createElement('button');
+      runBtn.className = 'code-action-btn run-btn';
+      runBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run`;
+      runBtn.onclick = () => runCommand(runnable.api, runnable.label);
+      btnGroup.appendChild(runBtn);
+    }
+
+    // View button (for config-like YAML blocks)
+    if (configFile && isConfigBlock(block.textContent)) {
+      const viewBtn = document.createElement('button');
+      viewBtn.className = 'code-action-btn view-btn';
+      viewBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> View`;
+      viewBtn.onclick = () => openFlyout(configFile);
+      btnGroup.appendChild(viewBtn);
+    }
+
+    // Copy button
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'code-action-btn copy-btn';
+    copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`;
+    copyBtn.onclick = () => copyCode(block, copyBtn);
+    btnGroup.appendChild(copyBtn);
+
+    pre.appendChild(btnGroup);
   });
 
-  // Bind view-file buttons
-  contentEl.querySelectorAll('.view-file-btn').forEach(btn => {
-    btn.addEventListener('click', () => openFlyout(btn.dataset.file));
+  // Make localhost URLs in <code> clickable
+  contentEl.querySelectorAll('code').forEach(el => {
+    if (el.closest('pre')) return; // skip code blocks
+    const text = el.textContent;
+    if (/^https?:\/\/localhost[:/]/.test(text)) {
+      const link = document.createElement('a');
+      link.href = text;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = text;
+      link.className = 'localhost-link';
+      el.replaceWith(link);
+    }
   });
 
   contentEl.scrollTop = 0;
@@ -594,53 +666,129 @@ async function checkServices() {
   }
 }
 
-// ---- Context Panel (left gutter actions) ----
-const CONTEXT_ACTIONS = {
-  'collector': [
-    { icon: 'file', label: 'config-step1.yaml', file: 'content/configs/otel-collector/config-step1.yaml' }
-  ],
-  'collector-practice': [
-    { icon: 'file', label: 'config-step1.yaml', file: 'content/configs/otel-collector/config-step1.yaml' }
-  ],
-  'victoriametrics': [
-    { icon: 'file', label: 'config-step2.yaml', file: 'content/configs/otel-collector/config-step2.yaml' }
-  ],
-  'vm-practice': [
-    { icon: 'file', label: 'config-step2.yaml', file: 'content/configs/otel-collector/config-step2.yaml' }
-  ],
-  'victorialogs': [
-    { icon: 'file', label: 'config-step3.yaml', file: 'content/configs/otel-collector/config-step3.yaml' }
-  ],
-  'vl-practice': [
-    { icon: 'file', label: 'config-step3.yaml', file: 'content/configs/otel-collector/config-step3.yaml' }
-  ],
-  'visualization': [
-    { icon: 'file', label: 'config-step3.yaml', file: 'content/configs/otel-collector/config-step3.yaml' }
-  ],
-  'grafana-practice': [
-    { icon: 'file', label: 'config-step3.yaml', file: 'content/configs/otel-collector/config-step3.yaml' }
-  ],
+// ---- Config file mapping per section ----
+const SECTION_CONFIG_FILES = {
+  'collector': 'content/configs/otel-collector/config-step1.yaml',
+  'victoriametrics': 'content/configs/otel-collector/config-step2.yaml',
+  'victorialogs': 'content/configs/otel-collector/config-step3.yaml',
+  'visualization': 'content/configs/otel-collector/config-step3.yaml',
 };
 
-const CTX_ICONS = {
-  file: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
-};
+// Config-related keywords to detect YAML config snippets
+const CONFIG_KEYWORDS = ['receivers:', 'exporters:', 'processors:', 'service:', 'postgrespro:', 'hostmetrics:', 'pipelines:', 'plugins:'];
 
-function updateContextPanel(step) {
-  const panel = document.getElementById('context-panel');
-  const actions = CONTEXT_ACTIONS[step.sectionId] || [];
+function isConfigBlock(codeText) {
+  return CONFIG_KEYWORDS.some(kw => codeText.includes(kw));
+}
 
-  if (actions.length === 0) {
-    panel.innerHTML = '';
-    return;
+// ---- Runnable Command Detection ----
+// Maps curl patterns in code blocks to API endpoints
+const CURL_COMMAND_MAP = [
+  {
+    pattern: /curl.*localhost:8889\/metrics.*grep.*"\^postgresql_".*head/,
+    api: '/api/run/collector-metrics?filter=postgresql_&limit=10',
+    label: 'PostgreSQL metrics (first 10)'
+  },
+  {
+    pattern: /curl.*localhost:8889\/metrics.*grep.*-c.*"\^postgresql_"/,
+    api: '/api/run/collector-metrics-count?filter=postgresql_',
+    label: 'PostgreSQL metrics count'
+  },
+  {
+    pattern: /curl.*localhost:8889\/metrics.*grep.*"\^system_".*head/,
+    api: '/api/run/collector-metrics?filter=system_&limit=5',
+    label: 'System metrics (first 5)'
+  },
+  {
+    pattern: /curl.*localhost:8428\/api\/v1\/label/,
+    api: '/api/run/vm-query?q=up',
+    label: 'VictoriaMetrics metric names'
+  },
+  {
+    pattern: /curl.*localhost:8428\/api\/v1\/query\?query=([^'"&\s]+)/,
+    apiFn: (match) => `/api/run/vm-query?q=${encodeURIComponent(match[1])}`,
+    label: 'VictoriaMetrics query'
+  },
+  {
+    pattern: /curl.*localhost:9428\/select\/logsql\/query/,
+    api: '/api/run/vl-query?q=*&limit=5',
+    label: 'VictoriaLogs query'
+  },
+  {
+    pattern: /curl.*localhost:8428\/health/,
+    api: '/api/run/vm-query?q=up',
+    label: 'VictoriaMetrics health'
+  },
+  {
+    pattern: /curl.*localhost:9428\/health/,
+    api: '/api/run/vl-query?q=*&limit=1',
+    label: 'VictoriaLogs health'
+  },
+  {
+    pattern: /curl.*localhost:3000\/api\/datasources/,
+    apiFn: () => '/api/health',
+    label: 'Grafana datasources'
+  },
+];
+
+function findRunnableCommand(codeText) {
+  for (const mapping of CURL_COMMAND_MAP) {
+    const match = codeText.match(mapping.pattern);
+    if (match) {
+      const api = mapping.apiFn ? mapping.apiFn(match) : mapping.api;
+      return { api, label: mapping.label };
+    }
   }
+  return null;
+}
 
-  panel.innerHTML = actions.map(a => `
-    <button class="ctx-btn" onclick="openFlyout('${a.file}')">
-      ${CTX_ICONS[a.icon] || CTX_ICONS.file}
-      <span class="ctx-tooltip">${a.label}</span>
-    </button>
-  `).join('');
+// ---- Run Command (execute check via API, show in bottom drawer) ----
+async function runCommand(apiUrl, label) {
+  const overlay = document.getElementById('drawer-overlay');
+  const title = document.getElementById('drawer-title');
+  const body = document.getElementById('drawer-body');
+
+  title.textContent = label;
+  body.innerHTML = '<div class="loading">Выполнение</div>';
+  overlay.classList.add('open');
+
+  try {
+    const resp = await fetch(apiUrl);
+    const data = await resp.json();
+
+    if (data.ok === false) {
+      body.innerHTML = `<pre><code class="run-error">Error: ${data.error}</code></pre>`;
+      return;
+    }
+
+    const output = data.output || JSON.stringify(data, null, 2);
+    let highlighted;
+    if (output.trim().startsWith('{') || output.trim().startsWith('[')) {
+      highlighted = hljs.highlight(output, { language: 'json' }).value;
+    } else {
+      highlighted = escapeHtml(output);
+    }
+
+    const meta = [];
+    if (data.total !== undefined) meta.push(`total: ${data.total}`);
+    if (data.showing !== undefined) meta.push(`showing: ${data.showing}`);
+    if (data.count !== undefined) meta.push(`count: ${data.count}`);
+    const metaLine = meta.length ? `<div class="run-meta">${meta.join(' | ')}</div>` : '';
+
+    body.innerHTML = `${metaLine}<pre><code>${highlighted}</code></pre>`;
+  } catch (err) {
+    body.innerHTML = `<pre><code class="run-error">Error: ${err.message}</code></pre>`;
+  }
+}
+
+function closeDrawer() {
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // ---- Flyout File Viewer ----
@@ -688,10 +836,11 @@ function initEvents() {
 
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    // Close flyout on Escape
-    if (e.key === 'Escape') { closeFlyout(); return; }
-    // Don't navigate when flyout is open
+    // Close flyout/drawer on Escape
+    if (e.key === 'Escape') { closeFlyout(); closeDrawer(); return; }
+    // Don't navigate when flyout/drawer is open
     if (document.getElementById('flyout-overlay').classList.contains('open')) return;
+    if (document.getElementById('drawer-overlay').classList.contains('open')) return;
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); nextStep(); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prevStep(); }
     else if (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') { e.preventDefault(); toggleSidebar(); }

@@ -123,14 +123,3 @@ exporters:
 Используем для проверки: **собираются ли метрики?**
 
 ---
-
-## Итоги
-
-- **postgrespro receiver** собирает метрики PostgreSQL по плагинам
-- **hostmetrics receiver** собирает метрики ОС
-- **prometheus exporter** публикует метрики для проверки
-- Конфигурация: receivers → processors → exporters → service
-
-Переходим к практике.
-
----
